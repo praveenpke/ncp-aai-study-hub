@@ -175,17 +175,26 @@ POST {base_url}/v1/ranking
 
 The exam-relevant details: reranking lives at **`/v1/ranking`** (not `/v1/embeddings`), takes a `query` + a list of `passages`, and returns `rankings` scored by **`logit`** (sort descending, keep the top-N). And the embedding endpoint's **`input_type`** is the asymmetry knob (trap #5) — `"passage"` for documents, `"query"` for queries.
 
-**NAT retriever/embedder config.** When you wire retrieval through NeMo Agent Toolkit, you declare an **`embedder`**, an optional **`reranker`**, a **`vector_store`**, and the candidate counts (`top_k` wide / `rerank_top_n` narrow) — the two-stage mantra expressed as config:
+**NAT retriever/embedder config (NeMo Agent Toolkit v1.7).** In NAT you declare a named **`embedder`** in the top-level `embedders:` block, then a named **`retriever`** in the `retrievers:` block that references that embedder by name (`embedding_model`) and points at the vector store. Components use the `_type:` discriminator; the vector-store choice *is* the retriever `_type` (`milvus_retriever` or `nemo_retriever`). `top_k` sets the wide first-stage candidate count (the `nemo_retriever` NIM provider caps it at `gt 0, le 50`; `milvus_retriever` has no documented cap):
 
 ```yaml
-retriever:
-  type: nim
-  embedder:  { model: nvidia/llama-3.2-nv-embedqa-1b-v2, base_url: ${NIM_URL} }
-  reranker:  { model: nvidia/llama-3.2-nv-rerankqa-1b-v2, base_url: ${NIM_URL} }
-  vector_store: { type: milvus }   # or faiss for local dev
-  top_k: 40            # stage 1: retrieve wide & cheap
-  rerank_top_n: 5      # stage 2: rank narrow & expensive
+# v1.4 used dotted/nested inline blocks; v1.7 uses named components + _type
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/llama-nemotron-embed-1b-v2   # renamed in 1.7 (was llama-3.2-nv-embedqa-1b-v2)
+    base_url: ${NIM_URL}
+
+retrievers:
+  kb_retriever:
+    _type: milvus_retriever            # or nemo_retriever; vector store = the retriever _type
+    uri: ${MILVUS_URI}                 # http://localhost:19530 (faiss-style local dev: nemo_retriever)
+    collection_name: docs
+    embedding_model: nim_embedder      # references the named embedder above (milvus_retriever field)
+    top_k: 40                          # stage 1: retrieve wide & cheap (nemo_retriever caps top_k at gt 0, le 50)
 ```
+
+Reranking is **not** a field of the NAT retriever config — wire the rerank/precision stage as a separate function (e.g. a `ContextualCompressionRetriever`-style tool) and keep the narrow top-N there. The two-stage mantra (wide `top_k` → narrow rerank) is the concept; in NAT only the wide retrieval stage lives in `retrievers:`.
 
 ## 5. Decision frameworks
 

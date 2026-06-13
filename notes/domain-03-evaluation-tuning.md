@@ -223,7 +223,7 @@ Typical recipe: **SFT first, then DPO** on top.
 
 ### 4.1 NAT Profiler — workflow → agent → tool breakdown
 
-`nat eval` with `general.profiler` (or `nat profile`) instruments the workflow **top-down to individual tool calls**, capturing **input/output token counts**, **per-step latency** (LLM inference vs tool execution vs overhead), and **workflow runtime forecasts / bottleneck detection**. The point is to find the dominant cost driver so you optimize the *right* step:
+`nat eval` with `general.profiler` instruments the workflow **top-down to individual tool calls**, capturing **input/output token counts**, **per-step latency** (LLM inference vs tool execution vs overhead), and **workflow runtime forecasts / bottleneck detection**. The point is to find the dominant cost driver so you optimize the *right* step:
 
 ```
 Component             Tokens   Latency   % of total
@@ -245,7 +245,7 @@ Reading this: Search Agent's **LLM generation** is the hotspot (40% of latency, 
 - **Inputs:** `--target_users` (concurrent capacity) and the **target workflow runtime** (max acceptable end-to-end response time); optionally `--target_llm_latency` (target P95 LLM latency, in seconds) when LLM latency dominates.
 - **Two modes:** **online** profiles your live workflow now; **offline mode** sizes from previously gathered metrics (gather once, re-size many times without re-running the agent).
 - **Output:** estimated **GPU count / cluster size** to hit those targets — capacity planning, scaling triggers.
-- Install: `nvidia-nat[profiling]` (it leans on the eval/profiler subsystem).
+- Install: `nvidia-nat[profiler]` (it leans on the eval/profiler subsystem).
 
 ```bash
 # 1) gather metrics across concurrency levels
@@ -630,16 +630,16 @@ curl -X POST "$CUSTOMIZER_URL/v1/customization/jobs" -H "Content-Type: applicati
 **8) NAT Profiler + Sizing Calculator — find the hotspot, then size the cluster**
 
 ```bash
-# (a) PROFILE: add a profiler block to the eval config, then `nat eval` emits per-step
-#     token/latency breakdown into output_dir (workflow → agent → tool).
-cat >> eval_config.yml <<'YAML'
-  general:
-    output_dir: ./.tmp/nat/eval_output
-    profiler:
-      compute_llm_metrics: true         # per-step inference-optimization metrics
-      token_uniqueness_forecast: true   # inter-query token uniqueness (spot repeated/wasted context)
-      workflow_runtime_forecast: true   # forecast expected workflow runtime
-YAML
+# (a) PROFILE: add a profiler block under eval.general in the eval config, then `nat eval`
+#     emits per-step token/latency breakdown into output_dir (workflow → agent → tool).
+#  eval_config.yml:
+#    eval:
+#      general:
+#        output_dir: ./.tmp/nat/eval_output
+#        profiler:
+#          compute_llm_metrics: true         # per-step inference-optimization metrics
+#          token_uniqueness_forecast: true   # inter-query token uniqueness (spot repeated/wasted context)
+#          workflow_runtime_forecast: true   # forecast expected workflow runtime
 nat eval --config_file eval_config.yml      # read output_dir for the breakdown table
 
 # (b) SIZE: gather metrics across concurrency levels, then size offline for a target SLA.

@@ -665,7 +665,7 @@
       <ul>
         <li><b>Inputs:</b> <code>--target_users</code> + target workflow runtime (max acceptable response time); optionally <code>--target_llm_latency</code> (P95 LLM latency, seconds)</li>
         <li><b>Modes:</b> <b>online</b> profiles live; <b>offline_mode</b> re-sizes from previously gathered metrics (gather once, plan many SLAs)</li>
-        <li><b>Output:</b> estimated <b>GPU count / cluster size</b> · install <code>nvidia-nat[profiling]</code></li>
+        <li><b>Output:</b> estimated <b>GPU count / cluster size</b> · install <code>nvidia-nat[profiler]</code></li>
       </ul>
       <p style="margin-top:6px"><b>Profiler vs Sizing:</b> Profiler = <i>where do tokens/latency go?</i> · Sizing = <i>how many GPUs for N users at latency L?</i> Both System-level.</p>
     </div>
@@ -1013,15 +1013,16 @@ model.print_trainable_parameters()        # e.g. "trainable params: 0.26%" — t
 
   <div class="card amber">
     <h4><span class="icon">📐</span>8 · NAT Profiler + Sizing Calculator <span class="pill a">find the hotspot, then size the cluster</span></h4>
-    <pre class="code-block"><code># (a) PROFILE: add a profiler block to the eval config, then `nat eval` emits per-step
+    <pre class="code-block"><code># (a) PROFILE: add a profiler block under eval.general, then `nat eval` emits per-step
 #     token/latency breakdown into output_dir (workflow → agent → tool).
 #  eval_config.yml:
-#    general:
-#      output_dir: ./.tmp/nat/eval_output
-#      profiler:
-#        compute_llm_metrics: true          # per-step inference-optimization metrics
-#        token_uniqueness_forecast: true    # inter-query token uniqueness (repeated/wasted context)
-#        workflow_runtime_forecast: true    # forecast expected workflow runtime
+#    eval:
+#      general:
+#        output_dir: ./.tmp/nat/eval_output
+#        profiler:
+#          compute_llm_metrics: true          # per-step inference-optimization metrics
+#          token_uniqueness_forecast: true    # inter-query token uniqueness (repeated/wasted context)
+#          workflow_runtime_forecast: true    # forecast expected workflow runtime
 nat eval --config_file eval_config.yml       # read output_dir for the breakdown table
 
 # (b) SIZE: gather metrics across concurrency levels, then size offline for a target SLA.

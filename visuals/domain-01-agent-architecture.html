@@ -651,7 +651,7 @@
   <div class="tbl-scroll"><table class="tbl">
     <tr><th>Agent type</th><th><code>_type:</code></th><th>Strategy (LLM calls)</th><th>Pick when</th></tr>
     <tr><td><b>Tool Calling Agent</b></td><td><code>tool_calling_agent</code></td><td>Single-turn: read schemas, emit 0+ tool calls, return. No loop. <b>1 LLM call</b></td><td class="good">One-step task; clear query→tool mapping; minimal latency. <b>The baseline — start here</b></td></tr>
-    <tr><td><b>ReAct Agent</b></td><td><code>react_agent</code></td><td>Interleaved Thought→Action→Observation loop; re-prompts with full trace each step. <b>N calls for N steps</b></td><td class="good">Multi-step, each step depends on the last result; exploratory path. <b>Set <code>max_iterations</code> or it loops forever</b></td></tr>
+    <tr><td><b>ReAct Agent</b></td><td><code>react_agent</code></td><td>Interleaved Thought→Action→Observation loop; re-prompts with full trace each step. <b>N calls for N steps</b></td><td class="good">Multi-step, each step depends on the last result; exploratory path. <b>Set <code>max_tool_calls</code> (default 15; <code>max_iterations</code> legacy alias) or it loops forever</b></td></tr>
     <tr><td><b>ReWOO Agent</b></td><td><code>rewoo_agent</code></td><td>Plan→execute, <b>three-node graph</b> (planner→worker→solver); placeholder vars #E1→#E2. <b>~1-2 calls total</b></td><td class="good">Plan knowable upfront, no branching; cut calls/latency. <span style="color:var(--red)">Cost: no mid-course correction</span></td></tr>
     <tr><td><b>Reasoning Agent</b></td><td><code>reasoning_agent</code></td><td><b>Wraps another function/agent</b> + an explicit up-front reasoning/plan layer — plans <b>ahead</b>, not between steps</td><td class="good">High-accuracy / deep-analysis; pairs with reasoning-tuned Nemotron. More tokens/turn</td></tr>
     <tr><td><b>Router Agent</b></td><td><code>router_agent</code></td><td><b>Dispatch only:</b> classify → hand off → done. No return loop. <b>LLM- or rule-based</b></td><td class="good">Multi-domain / intent routing. <span style="color:var(--amber)">Adds indirection, not intelligence</span></td></tr>
@@ -1070,14 +1070,14 @@ workflow:
   _type: react_agent
   llm_name: nim_llm
   tool_names: [country_lookup, calculator, write_summary]
-  max_iterations: 10            # without this, a confused agent loops until tokens run out
+  max_tool_calls: 10            # default 15; legacy alias max_iterations still accepted. Without a cap, a confused agent loops until tokens run out
 
 # (c) plan-first, ~2 LLM calls total — cheap but no mid-run correction
 workflow:
   _type: rewoo_agent
   llm_name: nim_llm
   tool_names: [country_lookup, calculator, write_summary]</code></pre>
-    <p><b>What to notice:</b> the architecture decision reduces to <b>one <code>_type:</code> line</b> over an unchanged tool set — NAT's "agents/workflows as composable function calls" thesis paying off. <code>max_iterations</code> on the ReAct agent is the autonomy-vs-controllability dial (trap #16): the single most common NAT production bug is a ReAct agent with no iteration cap. Profile all three with <code>nat eval</code> / the profiler to make the latency/token/accuracy trade-off data-driven.</p>
+    <p><b>What to notice:</b> the architecture decision reduces to <b>one <code>_type:</code> line</b> over an unchanged tool set — NAT's "agents/workflows as composable function calls" thesis paying off. <code>max_tool_calls</code> (default 15; legacy alias <code>max_iterations</code>) on the ReAct agent is the autonomy-vs-controllability dial (trap #16): the single most common NAT production bug is a ReAct agent with no tool-call cap. Profile all three with <code>nat eval</code> / the profiler to make the latency/token/accuracy trade-off data-driven.</p>
   </div>
 
   <div class="card purple">
@@ -1166,7 +1166,7 @@ workflow:
     <li>12-Factor Agents (Dex Horthy) — <a href="https://github.com/humanlayer/12-factor-agents">github.com/humanlayer/12-factor-agents</a></li>
     <li>A2A protocol specification (v1.0) — <a href="https://a2a-protocol.org/latest/specification/">a2a-protocol.org/latest/specification</a></li>
     <li>MCP spec &amp; Python SDK — <a href="https://modelcontextprotocol.io/specification/">modelcontextprotocol.io/specification</a> · <a href="https://github.com/modelcontextprotocol/python-sdk">python-sdk</a></li>
-    <li>NeMo Agent Toolkit — <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html">docs</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.2/workflows/workflow-configuration.html">workflow configuration</a></li>
+    <li>NeMo Agent Toolkit — <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html">docs</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/workflow-configuration.html">workflow configuration</a></li>
     <li>NAT agent types (react/reasoning/rewoo/tool_calling/router/responses/sequential/parallel) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/index.html">components/agents</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/about/sequential-executor.html">sequential executor</a></li>
     <li>NVIDIA AI Blueprints — <a href="https://docs.nvidia.com/aiq-blueprint/latest/architecture/overview.html">AI-Q research assistant</a> · <a href="https://build.nvidia.com/nvidia/multi-agent-intelligent-warehouse">Multi-Agent Warehouse</a> · <a href="https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel">Data Flywheel</a> · <a href="https://github.com/NVIDIA-AI-Blueprints/Retail-Agentic-Commerce">Retail Agentic Commerce (ACP/UCP)</a></li>
     <li>ReAct paper — <a href="https://arxiv.org/abs/2210.03629">arxiv.org/abs/2210.03629</a> · Reflexion — <a href="https://arxiv.org/abs/2303.11366">arxiv.org/abs/2303.11366</a> · ReWOO — <a href="https://arxiv.org/abs/2305.18323">arxiv.org/abs/2305.18323</a></li>

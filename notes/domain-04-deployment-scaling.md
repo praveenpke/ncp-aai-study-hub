@@ -130,10 +130,10 @@ Everything above (NIM, Triton, TRT-LLM) serves the **model**. NAT serves the **a
 | **FastAPI server** | `nat serve --config_file wf.yml` (alias for `nat start fastapi`) | REST + WebSocket, default **:8000** | **Default production choice** — clients call the agent over HTTP/WS |
 | **MCP server** | `nat mcp serve` | Model Context Protocol (MCP SDK runtime) | Agent must be **discoverable/callable as a tool** by other MCP-compatible agents/orchestrators (e.g. a "DB-query agent" other agents invoke) |
 | **FastMCP server** | `nat fastmcp server run` | MCP over streamable-HTTP, default **:9902**, tools at `/mcp` | Lightweight MCP — simpler/lower-overhead MCP scenarios, dev/test of MCP integrations |
-| **A2A server** | `nvidia-nat[a2a]` package, A2A front end | **Agent-to-Agent** protocol (Linux Foundation open standard) | **Distributed multi-agent**: each agent runs as an independent service, discovers peers via **Agent Cards**, delegates tasks. Independent scaling/deployment per agent |
+| **A2A server** | `nat a2a serve` (pkg `nvidia-nat[a2a]`), default **:10000** | **Agent-to-Agent** protocol (Linux Foundation open standard) | **Distributed multi-agent**: each agent runs as an independent service, discovers peers via **Agent Cards**, delegates tasks. Independent scaling/deployment per agent |
 | **Console front end** | `nat run` (console) | Terminal/interactive | **Dev & debugging only** — never production |
 
-**FastAPI front-end surface (verified against NAT 1.5 docs):** `POST /generate` and `POST /generate/stream`, `POST /chat` and `POST /chat/stream`, an **OpenAI-compatible** `POST /v1/chat/completions`, a `/websocket` endpoint for bidirectional streaming, `GET /health`, and `POST /evaluate`. So a NAT agent is reachable by *the same* OpenAI client pattern you point at a NIM — except `:8000` here serves the *agent*, not the raw model.
+**FastAPI front-end surface (verified against NAT 1.7 docs):** `POST /generate` and `POST /generate/stream`, `POST /chat` and `POST /chat/stream`, an **OpenAI-compatible** `POST /v1/chat/completions`, a `/websocket` endpoint for bidirectional streaming, `GET /health`, and `POST /evaluate`. So a NAT agent is reachable by *the same* OpenAI client pattern you point at a NIM — except `:8000` here serves the *agent*, not the raw model.
 
 > **Selection decision tree (memorize the shape):** dev/debug → **Console**. Else, is the agent consumed by other agents? → no → **FastAPI** (default). → yes → do agents run as separate services? → yes → **A2A**. → no → need full MCP? → yes → **MCP** → no → **FastMCP**.
 
@@ -257,7 +257,7 @@ NVIDIA's managed AI platform: reserved clusters of NVIDIA GPUs hosted in partner
 | Clients call the agent over HTTP/WebSocket (default production) | **FastAPI server** (`nat serve`, :8000) | REST + streaming + OpenAI-compatible `/v1/chat/completions` |
 | Agent must be callable **as a tool** by other MCP agents | **MCP server** (`nat mcp serve`) | Publishes the workflow + tools as MCP tools |
 | Lightweight / dev MCP integration | **FastMCP server** (`nat fastmcp server run`, :9902 `/mcp`) | Less overhead, streamable-HTTP |
-| Distributed multi-agent, each agent an **independent service** | **A2A server** (`nvidia-nat[a2a]`) | Agent Cards for discovery; independent scaling per agent |
+| Distributed multi-agent, each agent an **independent service** | **A2A server** (`nat a2a serve`, :10000) | Agent Cards for discovery; independent scaling per agent |
 | Local development / debugging only | **Console front end** (`nat run`) | Interactive terminal — never production |
 | Agent run takes 30 s+ (long research task) | **Async job** (submit → job ID → poll, Dask-backed) | Avoids HTTP timeouts, LB disconnects, retry storms — **not** a long-timeout sync call |
 

@@ -1222,7 +1222,7 @@ garak --list_probes</pre>
       <tr><td><b>NeMo Auditor</b> (NeMo Microservice)</td><td>Pre-deployment / CI <b>offline</b> safety + vuln scanning (Garak-based); audit jobs, vuln scanning, safety scoring</td><td>Stage 1 gate: block deploys that fail a safety audit; replaces the deprecated Safety Blueprint's evaluate stage</td></tr>
       <tr><td><b>NAT Safety &amp; Security Engine</b> (NeMo Agent Toolkit)</td><td>In-workflow <b>defense middleware</b> (intercept + mitigate inline), <b>red-teaming middleware</b> (simulate injection/jailbreak/tool-poisoning vs the whole workflow), <b>redaction processors</b> (<code>nvidia-nat[pii-defense]</code>), <b>Profiler</b></td><td>Guardrails/red-teaming <b>inside</b> a NAT agent workflow (not just one LLM call) + token/tool-call profiling</td></tr>
       <tr><td><b>Safe Synthesizer</b> (NeMo Microservice, <i>Early Access</i>)</td><td>Generates <b>privacy-protected synthetic tabular data</b> — PII replacement + optional <b>differential privacy</b></td><td>Train/eval on sensitive-data patterns without exposing real records (Stage 2); <b>not</b> a runtime control</td></tr>
-      <tr><td><b>NeMo Agent Toolkit (AIQ) Profiler</b></td><td>Profiling/observability/evaluation for agent workflows — feeds auditability; measures per-rail latency</td><td>You need traces of agent tool-call chains for audit + to tune the guardrail latency budget</td></tr>
+      <tr><td><b>NeMo Agent Toolkit (NAT) Profiler</b></td><td>Profiling/observability/evaluation for agent workflows — feeds auditability; measures per-rail latency</td><td>You need traces of agent tool-call chains for audit + to tune the guardrail latency budget</td></tr>
     </table>
   </div>
 

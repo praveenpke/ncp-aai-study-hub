@@ -531,15 +531,20 @@ POST {base}/v1/ranking
   "passages": [{"text":"..."},{"text":"..."}] }
 # -> {"rankings":[{"index":2,"logit":8.1}, ...]}</code></pre>
       <p>Reranking lives at <code>/v1/ranking</code> (not <code>/v1/embeddings</code>), scores by <b><code>logit</code></b> (sort desc, keep top-N). <code>input_type</code> is the asymmetry knob (trap #5).</p></div>
-    <div class="card blue"><h4><span class="icon">🧩</span>NAT retriever = two-stage as config</h4>
-      <pre class="code-block"><code>retriever:
-  type: nim
-  embedder: { model: nvidia/llama-3.2-nv-embedqa-1b-v2 }
-  reranker: { model: nvidia/llama-3.2-nv-rerankqa-1b-v2 }
-  vector_store: { type: milvus }   # or faiss (local dev)
-  top_k: 40          # stage 1: retrieve wide &amp; cheap
-  rerank_top_n: 5    # stage 2: rank narrow &amp; expensive</code></pre>
-      <p>The two-stage mantra expressed declaratively: <code>top_k</code> wide → <code>rerank_top_n</code> narrow, with embedder/reranker/vector_store as swappable blocks.</p></div>
+    <div class="card blue"><h4><span class="icon">🧩</span>NAT retriever config (v1.7)</h4>
+      <pre class="code-block"><code>embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/llama-nemotron-embed-1b-v2  # renamed in 1.7
+
+retrievers:
+  kb_retriever:
+    _type: milvus_retriever      # or nemo_retriever (= vector store)
+    uri: ${MILVUS_URI}
+    collection_name: docs
+    embedding_model: nim_embedder  # milvus_retriever field
+    top_k: 40                      # wide stage 1 (nemo_retriever caps at le 50)</code></pre>
+      <p>Named <code>embedders:</code> + <code>retrievers:</code> blocks, <code>_type:</code> discriminator, embedder referenced by name. Reranking is a <i>separate</i> function in NAT, not a retriever field — the two-stage mantra is the concept; only the wide <code>top_k</code> stage lives here. <span style="opacity:.75">(v1.4 used nested inline <code>embedder/reranker/vector_store</code> blocks.)</span></p></div>
   </div>
 </section>
 

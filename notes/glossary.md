@@ -150,7 +150,7 @@ A GPU-accelerated **data preparation** toolkit/microservice: fuzzy dedup, langua
 
 ### NeMo Retriever
 A microservice family for **RAG retrieval** — embedding, indexing, search, and reranking — served as NIMs.
-**NVIDIA context:** Exact current models include **`llama-3.2-nv-embedqa-1b-v2`** (multilingual embedding, up to 8192 tokens, Matryoshka sizes) and **`llama-3.2-nv-rerankqa-1b-v2`** (cross-encoder rerank score). *(Note: the `nv-embedqa`/`nv-rerankqa` v2 APIs carry a deprecation date of 2026-05-18 — version-dependent; verify the current model card before relying on a specific name.)*
+**NVIDIA context:** Exact current models include **`llama-nemotron-embed-1b-v2`** (multilingual embedding, 26 languages, long-document QA) and **`llama-nemotron-rerank-1b-v2`** (cross-encoder rerank score). *(Note: these supersede the older `llama-3.2-nv-embedqa-1b-v2` / `llama-3.2-nv-rerankqa-1b-v2` NIMs, whose v2 APIs carried a 2026-05-18 deprecation date — model names are version-dependent; verify the current model card before relying on a specific name.)*
 **Why it matters:** "Which NVIDIA service provides the embedding + reranking for my RAG pipeline?" → NeMo Retriever (NIMs). Know embedding ≠ reranking (two different model roles).
 **Domains:** D6, D7.
 
@@ -196,13 +196,13 @@ An architecture that **grounds** generation in retrieved knowledge: search a kno
 
 ### Embedding
 A dense vector representation of text where **semantic similarity = geometric proximity**, enabling similarity search/retrieval/clustering.
-**NVIDIA context:** Served via NeMo Retriever embedding NIMs (e.g., `llama-3.2-nv-embedqa-1b-v2`). NAT embedder components connect to these endpoints.
+**NVIDIA context:** Served via NeMo Retriever embedding NIMs (e.g., `llama-nemotron-embed-1b-v2`). NAT embedder components connect to these endpoints.
 **Why it matters:** Embedding quality bounds **recall** — if the right doc isn't retrievable, no downstream fix helps. The embedding model is the first RAG tuning lever after chunking.
 **Domains:** D6.
 
 ### Reranking
 A **second-stage** step that uses a **cross-encoder** to re-score/reorder first-stage candidates, capturing fine-grained query–document interactions bi-encoder embeddings miss.
-**NVIDIA context:** NeMo Retriever reranking NIM (`llama-3.2-nv-rerankqa-1b-v2`); sits between retrieval and generation in AI-Q.
+**NVIDIA context:** NeMo Retriever reranking NIM (`llama-nemotron-rerank-1b-v2`, a cross-encoder logit scorer; supersedes the older `llama-3.2-nv-rerankqa-1b-v2`); sits between retrieval and generation in AI-Q.
 **Why it matters:** Improves **precision@k / NDCG** by promoting the most relevant chunk to the top (LLMs weight earlier context more). "Right docs retrieved but ranked too low" → add/tune a reranker.
 **Domains:** D6, D3.
 
@@ -318,13 +318,13 @@ A NAT planning tool that **estimates compute** (GPU count, replicas) needed to h
 
 ### Tuning ladder (prompt → RAG → fine-tune → align)
 The cheapest-fix-first escalation: **(1) prompting** (~free) → **(2) RAG tuning** (facts) → **(3) LoRA/QLoRA** → **(4) full SFT** → **(5) DPO/RLHF** (alignment). Each rung ~10× the prior.
-**NVIDIA context:** NAT's parameter optimizer covers rung 1; NeMo Customizer covers 3–5.
+**NVIDIA context:** NAT's Config Optimizer (`nat optimize`) covers rung 1; NeMo Customizer covers 3–5.
 **Why it matters:** **Climb, never jump.** Most "we need fine-tuning" is solved by prompting or RAG. **Fine-tuning = skills/behavior; RAG = knowledge/facts.** The single most-tested tuning principle.
 **Domains:** D3.
 
 ### Prompt engineering / Parameter optimization
 Shaping behavior via instructions, few-shot examples, output schemas, and sampling params — and **automating** that search against an eval set.
-**NVIDIA context:** NAT's **Parameter Optimizer / Agent Hyperparameter Optimizer** searches prompt wording, temperature, top-p, max tokens, few-shot, and tool descriptions to maximize a target metric.
+**NVIDIA context:** NAT's **Config Optimizer** (run via `nat optimize`; install the `[config-optimizer]` extra) does Optuna numeric search + a genetic-algorithm prompt optimizer over prompt wording, temperature, top-p, max tokens, few-shot, and tool descriptions to maximize a target eval metric.
 **Why it matters:** Rung 1 of the ladder; "tune the agent without training" → parameter optimization. Replaces manual prompt tweaking with data-driven search.
 **Domains:** D2, D3.
 

@@ -837,13 +837,14 @@ resp = client.chat.completions.create(
   <h3>Agent (workflow) types — the named choices</h3>
   <div class="tablewrap"><table>
     <tr><th><code>_type</code></th><th>Pattern</th><th>Pick when</th></tr>
-    <tr><td><b>tool_calling</b></td><td>Uses the LLM's <b>native</b> function-calling API — implicit, fewest tokens</td><td class="cell-good">Model supports tool calling; you want speed</td></tr>
-    <tr><td><b>react</b></td><td>Explicit <b>Thought → Action → Observation</b> loop, visible in the trace</td><td class="cell-good">Transparent reasoning / models without native tool calling</td></tr>
-    <tr><td><b>reasoning</b></td><td>Plans the whole approach <b>up front</b>, then invokes a function (not between every step)</td><td class="cell-mid">A reasoning model should plan-then-act</td></tr>
-    <tr><td><b>rewoo</b></td><td><b>R</b>easoning <b>W</b>ith<b>o</b>ut <b>O</b>bservation — plans all tool calls before executing any</td><td class="cell-mid">Token/latency-sensitive multi-tool plans</td></tr>
-    <tr><td><b>router</b></td><td>Classifies the request and routes to the right sub-agent/tool set</td><td class="cell-mid">One endpoint serving several specialized agents</td></tr>
+    <tr><td><b>tool_calling_agent</b></td><td>Uses the LLM's <b>native</b> function-calling API — implicit, fewest tokens</td><td class="cell-good">Model supports tool calling; you want speed</td></tr>
+    <tr><td><b>react_agent</b></td><td>Explicit <b>Thought → Action → Observation</b> loop, visible in the trace</td><td class="cell-good">Transparent reasoning / models without native tool calling</td></tr>
+    <tr><td><b>reasoning_agent</b></td><td>Plans the whole approach <b>up front</b>, then invokes a function (not between every step)</td><td class="cell-mid">A reasoning model should plan-then-act</td></tr>
+    <tr><td><b>rewoo_agent</b></td><td><b>R</b>easoning <b>W</b>ith<b>o</b>ut <b>O</b>bservation — plans all tool calls before executing any</td><td class="cell-mid">Token/latency-sensitive multi-tool plans</td></tr>
+    <tr><td><b>router_agent</b></td><td>Classifies the request and routes to the right sub-agent/tool set</td><td class="cell-mid">One endpoint serving several specialized agents</td></tr>
   </table></div>
-  <div class="warn"><h4>⚠ Agent-type trap</h4><p><b>tool_calling = implicit/native; react = explicit Thought-Action-Observation trace.</b> Swap one YAML line (<code>type: tool_calling</code> → <code>type: react</code>) and the trace changes from <code>[llm_call]/[tool_call]</code> to <code>[thought]/[action]/[observation]/[answer]</code>. The trick option labels the native-function-calling agent as "ReAct."</p></div>
+  <p class="sub">Full 1.7 orchestrator set also includes <code>sequential_executor</code>, <code>parallel_executor</code>, <code>responses_api_agent</code>, <code>auto_memory_wrapper</code>. (Earlier docs wrote bare <code>tool_calling</code>/<code>react</code>; v1.7 <code>_type</code> strings carry the <code>_agent</code> suffix.)</p>
+  <div class="warn"><h4>⚠ Agent-type trap</h4><p><b>tool_calling_agent = implicit/native; react_agent = explicit Thought-Action-Observation trace.</b> Swap one YAML line (<code>_type: tool_calling_agent</code> → <code>_type: react_agent</code>) and the trace changes from <code>[llm_call]/[tool_call]</code> to <code>[thought]/[action]/[observation]/[answer]</code>. The trick option labels the native-function-calling agent as "ReAct."</p></div>
 
   <div class="grid g2">
     <div class="card" style="border-top:4px solid var(--green)">
@@ -857,12 +858,11 @@ llms:
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.1
 workflow:
-  _type: tool_calling    # swap to react to see the trace
+  _type: tool_calling_agent  # swap to react_agent to see the trace
   llm_name: nim_llm
   tool_names: [get_current_time]</code></pre>
       <pre><code>nat run   --config_file workflow.yaml --input "What time is it?"
-nat serve --config_file workflow.yaml   # REST + chat UI
-nat console --config workflow.yaml       # interactive terminal</code></pre>
+nat serve --config_file workflow.yaml   # REST + chat UI (interactive chat)</code></pre>
     </div>
     <div class="card" style="border-top:4px solid var(--blue)">
       <h4><code>nat.builder</code> vs YAML — same runtime</h4>
@@ -940,7 +940,7 @@ nat console --config workflow.yaml       # interactive terminal</code></pre>
   <div class="ladder">
     <div class="rung"><span class="lvl">1</span><span class="nm">Account + API key</span><span class="rl">NVIDIA account → <code>nvapi-</code> key at build.nvidia.com → <code>export NVIDIA_API_KEY=nvapi-...</code></span></div>
     <div class="rung"><span class="lvl">2</span><span class="nm">First NIM call</span><span class="rl"><code>pip install openai</code>; point the OpenAI client at <code>https://integrate.api.nvidia.com/v1</code></span></div>
-    <div class="rung"><span class="lvl">3</span><span class="nm">First NAT workflow</span><span class="rl"><code>pip install nvidia-nat</code>; minimal YAML; <code>nat run</code>. Toggle <code>tool_calling</code>↔<code>react</code> to compare traces</span></div>
+    <div class="rung"><span class="lvl">3</span><span class="nm">First NAT workflow</span><span class="rl"><code>pip install nvidia-nat</code>; minimal YAML; <code>nat run</code>. Toggle <code>tool_calling_agent</code>↔<code>react_agent</code> to compare traces</span></div>
     <div class="rung"><span class="lvl">4</span><span class="nm">First Guardrails run</span><span class="rl"><code>pip install nemoguardrails langchain-nvidia-ai-endpoints</code>; build a <code>config/</code> folder; <code>nemoguardrails chat --config config/</code></span></div>
     <div class="rung wrap-r"><span class="lvl">5</span><span class="nm">Self-hosted NIM (GPU)</span><span class="rl">NGC key → <code>docker login nvcr.io -u '$oauthtoken'</code> → <code>docker pull nvcr.io/nim/...</code> → run <code>--gpus all -p 8000:8000</code>; multi-model prod = <b>NIM Operator</b> on K8s</span></div>
   </div>
@@ -954,7 +954,7 @@ nat console --config workflow.yaml       # interactive terminal</code></pre>
     <tr><td>NAT core (agent types, YAML, functions, middleware)</td><td><code>pip install nvidia-nat</code></td></tr>
     <tr><td>LangChain / LangGraph plugin</td><td><code>pip install "nvidia-nat[langchain]" langchain-nvidia-ai-endpoints</code> (or <code>nvidia-nat-langchain</code>)</td></tr>
     <tr><td>Evaluation / red-teaming / RAG eval</td><td><code>pip install "nvidia-nat[eval]"</code> (or <code>nvidia-nat-eval</code>)</td></tr>
-    <tr><td>Profiler + sizing calculator</td><td><code>pip install "nvidia-nat[profiling]"</code></td></tr>
+    <tr><td>Profiler + sizing calculator</td><td><code>pip install "nvidia-nat[profiler]"</code> (or <code>nvidia-nat-profiler</code>; renamed from <code>[profiling]</code> in 1.5)</td></tr>
     <tr><td>MCP client/server</td><td><code>pip install "nvidia-nat[mcp]"</code></td></tr>
     <tr><td>Observability (Phoenix)</td><td><code>pip install nvidia-nat arize-phoenix</code></td></tr>
     <tr><td>Everything</td><td><code>pip install "nvidia-nat[all]"</code></td></tr>
@@ -1058,7 +1058,7 @@ nat console --config workflow.yaml       # interactive terminal</code></pre>
     <div class="trap"><h4><span class="tnum">11</span>Hosted endpoints are not production-private</h4><p>If the scenario mentions regulated/PII data, the hosted build.nvidia.com endpoint is the wrong answer regardless of convenience — <b>self-host the NIM</b>.</p></div>
     <div class="trap"><h4><span class="tnum">12</span>Blueprints are reference code, not managed services</h4><p>You deploy and own them (Docker/Helm); "NVIDIA operates the virtual assistant for you" is false.</p></div>
     <div class="trap"><h4><span class="tnum">13</span>NAT middleware order is a correctness property</h4><p>Defense <b>before</b> caching, logging <b>first</b>. "Order doesn't matter if all are present" is wrong: defense-after-caching skips safety on cached hits; logging-after-defense loses blocked-request logs. And <b>cache tool results, never LLM responses</b>.</p></div>
-    <div class="trap"><h4><span class="tnum">14</span>NAT agent types</h4><p><b>tool_calling = implicit/native</b>; <b>react = explicit Thought→Action→Observation</b>. Don't confuse with <b>reasoning</b> (plans up front) or <b>rewoo</b> (plans all calls before any execution). The trick option calls the native agent "ReAct."</p></div>
+    <div class="trap"><h4><span class="tnum">14</span>NAT agent types</h4><p><b>tool_calling_agent = implicit/native</b>; <b>react_agent = explicit Thought→Action→Observation</b>. Don't confuse with <b>reasoning_agent</b> (plans up front) or <b>rewoo_agent</b> (plans all calls before any execution). The trick option calls the native agent "ReAct."</p></div>
     <div class="trap"><h4><span class="tnum">15</span><code>nat.builder</code> ≡ YAML at runtime</h4><p>They compile to the same internal representation — authoring style only. "YAML runs faster / behaves differently" is false.</p></div>
     <div class="trap"><h4><span class="tnum">16</span>NAT plugins adapt components, not frameworks</h4><p>A wrapped LangChain tool does <b>not</b> bring LangChain's runtime/memory/orchestration — those stay NAT's. "A LangChain agent runs identically inside NAT" is wrong.</p></div>
     <div class="trap"><h4><span class="tnum">17</span><code>nat_test_llm</code> is testing, not evaluation</h4><p>Mock the LLM for <b>deterministic correctness</b> (assert tool-call sequences). Real LLMs are non-deterministic — reserve them for <b>quality evaluation</b> (NeMo Evaluator), not unit tests.</p></div>
@@ -1269,12 +1269,13 @@ curl -s http://localhost:8000/v1/chat/completions -H 'Content-Type: application/
     <div class="card" style="border-top:4px solid var(--green);grid-column:1/-1">
       <h4><span class="qnum">8</span>NAT production surface — middleware chain + multi-provider auth + deterministic test</h4>
       <pre><code># pipeline.yaml — concept-level; verify exact keys per NAT version
-llm:
-  _type: nim
-  model_name: meta/llama-3.3-70b-instruct
-  api_key: ${NVIDIA_API_KEY}          # secret via env ref — never inline
+llms:
+  llm:                                # named LLM map; referenced below by name
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    api_key: ${NVIDIA_API_KEY}        # secret via env ref — never inline
 workflow:
-  _type: tool_calling                 # or react / reasoning / rewoo / router
+  _type: tool_calling_agent           # or react_agent / reasoning_agent / rewoo_agent / router_agent
   llm_name: llm
   max_iterations: 10                  # cap the loop so it can't spin forever
   middleware:                         # ORDER IS A SECURITY PROPERTY
@@ -1380,7 +1381,7 @@ assert result.middleware_logs["defense"].blocked is False</code></pre>
     <li><a href="https://developer.nvidia.com/blog/streamline-evaluation-of-llms-for-accuracy-with-nvidia-nemo-evaluator/">NeMo Evaluator blog</a></li>
     <li><a href="https://github.com/NVIDIA/NeMo-Guardrails">NeMo Guardrails GitHub</a></li>
     <li><a href="https://developer.nvidia.com/nemo-retriever">NeMo Retriever</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard">reranker model card</a></li>
-    <li><a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">NeMo Agent Toolkit GitHub</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.2/index.html">docs</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.6/components/integrations/a2a.html">A2A</a></li>
+    <li><a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">NeMo Agent Toolkit GitHub</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html">docs (1.7)</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/integrations/a2a.html">A2A</a></li>
     <li><a href="https://blogs.nvidia.com/blog/nemotron-model-families/">Nemotron family</a> · <a href="https://research.nvidia.com/labs/nemotron/Nemotron-3/">Nemotron 3</a> · <a href="https://arxiv.org/abs/2505.00949">Llama-Nemotron paper</a></li>
     <li><a href="https://docs.nvidia.com/ai-enterprise/lifecycle/latest/lifecycle-policy.html">AI Enterprise lifecycle policy</a> · <a href="https://docs.nvidia.com/ai-enterprise/planning-resource/release-branches/latest/release-branches.html">release branches</a></li>
     <li><a href="https://github.com/NVIDIA-AI-Blueprints">Blueprints org</a> · <a href="https://github.com/NVIDIA-AI-Blueprints/ai-virtual-assistant">AI virtual assistant</a> · <a href="https://github.com/NVIDIA-AI-Blueprints/rag">RAG blueprint</a> · <a href="https://developer.nvidia.com/blog/build-an-enterprise-scale-multimodal-document-retrieval-pipeline-with-nvidia-nim-agent-blueprint/">multimodal PDF pipeline blog</a></li>

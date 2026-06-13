@@ -160,7 +160,7 @@ This is where the exam concentrates: NAT ships the reasoning patterns of §3.2 a
 | Agent type | `_type:` | Strategy (one LLM call vs many) | Pick when |
 |---|---|---|---|
 | **Tool Calling Agent** | `tool_calling_agent` | Single-turn: model reads tool schemas, emits 0-or-more tool calls, returns. No loop. **1 LLM call.** | Task is one step; the query→tool mapping is clear; latency must be minimal. The baseline — start here |
-| **ReAct Agent** | `react_agent` | Interleaved **Thought→Action→Observation** loop; re-prompts the model with the full trace each step. **N LLM calls for N steps.** | Multi-step task where each step depends on the *last result*; path is exploratory and must adapt. Set `max_iterations` (default cap) or it loops forever |
+| **ReAct Agent** | `react_agent` | Interleaved **Thought→Action→Observation** loop; re-prompts the model with the full trace each step. **N LLM calls for N steps.** | Multi-step task where each step depends on the *last result*; path is exploratory and must adapt. Set `max_tool_calls` (default 15; `max_iterations` accepted as a legacy alias) or it loops forever |
 | **ReWOO Agent** | `rewoo_agent` | Plan-then-execute, **three-node graph** (planner → worker → solver): planner writes the whole plan with placeholder vars (#E1→#E2), worker fills them, solver synthesizes. **~1-2 LLM calls** regardless of step count. | Plan is knowable upfront, no conditional branching; you want to cut LLM calls/latency. Cost: no mid-course correction after a bad/failed step |
 | **Reasoning Agent** | `reasoning_agent` | **Wraps another function/agent** and adds an explicit up-front reasoning/plan layer on top of it — it plans *ahead of time* rather than reasoning between steps. | High-accuracy / deep-analysis tasks where a richer plan before acting beats step-by-step reaction. Pairs with reasoning-tuned models (Nemotron). More tokens per turn |
 | **Router Agent** | `router_agent` | **Dispatch only:** classify the request, hand off to the matching sub-agent, *done* — no return loop, no synthesis. Routing can be **LLM-based or rule-based**. | Multi-domain / intent-based systems: send billing→billing agent, code→code agent. Router adds *indirection, not intelligence* — the smarts live in the sub-agents |
@@ -312,7 +312,7 @@ Blueprints are **validated reference *designs*** (NIM + NeMo + NAT/LangChain wir
 - 12-Factor Agents (Dex Horthy): https://github.com/humanlayer/12-factor-agents
 - A2A protocol specification (v1.0): https://a2a-protocol.org/latest/specification/
 - MCP spec & Python SDK: https://modelcontextprotocol.io/specification/ ; https://github.com/modelcontextprotocol/python-sdk
-- NeMo Agent Toolkit: https://github.com/NVIDIA/NeMo-Agent-Toolkit ; https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html ; workflow config: https://docs.nvidia.com/nemo/agent-toolkit/1.2/workflows/workflow-configuration.html
+- NeMo Agent Toolkit: https://github.com/NVIDIA/NeMo-Agent-Toolkit ; https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html ; workflow config: https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/workflow-configuration.html
 - NAT agent types (react/reasoning/rewoo/tool_calling/router/responses/sequential/parallel): https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/index.html ; Sequential Executor: https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/about/sequential-executor.html
 - NVIDIA AI Blueprints — AI-Q research assistant: https://docs.nvidia.com/aiq-blueprint/latest/architecture/overview.html ; Multi-Agent Intelligent Warehouse: https://build.nvidia.com/nvidia/multi-agent-intelligent-warehouse ; Data Flywheel: https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel ; Retail Agentic Commerce (ACP/UCP): https://github.com/NVIDIA-AI-Blueprints/Retail-Agentic-Commerce
 - ReAct paper: https://arxiv.org/abs/2210.03629 ; Reflexion paper: https://arxiv.org/abs/2303.11366 ; ReWOO paper: https://arxiv.org/abs/2305.18323
@@ -552,7 +552,7 @@ workflow:
   _type: react_agent
   llm_name: nim_llm
   tool_names: [country_lookup, calculator, write_summary]
-  max_iterations: 10            # without this, a confused agent loops until tokens run out
+  max_tool_calls: 10            # default 15; legacy alias max_iterations still accepted. Without a cap, a confused agent loops until tokens run out
 
 # (c) plan-first, ~2 LLM calls total — cheap but no mid-run correction
 workflow:
@@ -561,7 +561,7 @@ workflow:
   tool_names: [country_lookup, calculator, write_summary]
 ```
 
-*What to notice:* the architecture decision (§4.1-4.2) reduces to **one `_type:` line** over an unchanged tool set — that's NAT's "agents/workflows as composable function calls" thesis paying off. `max_iterations` on the ReAct agent is the autonomy-vs-controllability dial (trap #16/#2 of module): the single most common NAT production bug is a ReAct agent with no iteration cap. Profile all three with `nat eval` / the profiler to make the latency/token/accuracy trade-off data-driven instead of a guess.
+*What to notice:* the architecture decision (§4.1-4.2) reduces to **one `_type:` line** over an unchanged tool set — that's NAT's "agents/workflows as composable function calls" thesis paying off. `max_tool_calls` (default 15; legacy alias `max_iterations`) on the ReAct agent is the autonomy-vs-controllability dial (trap #16/#2 of module): the single most common NAT production bug is a ReAct agent with no tool-call cap. Profile all three with `nat eval` / the profiler to make the latency/token/accuracy trade-off data-driven instead of a guess.
 
 **9) NAT Router → domain-scoped sub-agents (split a 30-tool agent)**
 

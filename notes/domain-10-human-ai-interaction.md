@@ -375,8 +375,8 @@ If a question offers "escalation paths with confidence thresholds — NVIDIA-doc
 - NeMo Agent Toolkit repo: https://github.com/NVIDIA/NeMo-Agent-Toolkit
 - NAT HITL example (`simple_calculator_hitl`, `hitl_approval_function`): https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/develop/examples/HITL/simple_calculator_hitl/README.md
 - NAT Interactive Models guide (`HumanPromptText`, `UserInteractionManager`, `prompt_user_input`, serve-vs-run support): https://docs.nvidia.com/nemo/agent-toolkit/latest/reference/interactive-models.html
-- NAT WebSocket message schema (HITL prompts over `nat serve`): https://docs.nvidia.com/nemo/agent-toolkit/1.6/reference/websockets.html
-- NAT HTTP interactive execution (HITL/OAuth over plain HTTP, WebSocket-limited envs): https://docs.nvidia.com/nemo/agent-toolkit/1.5/reference/rest-api/http-interactive-execution.html
+- NAT WebSocket message schema (HITL prompts over `nat serve`): https://docs.nvidia.com/nemo/agent-toolkit/latest/reference/websockets.html
+- NAT HTTP interactive execution (HITL/OAuth over plain HTTP, WebSocket-limited envs): https://docs.nvidia.com/nemo/agent-toolkit/latest/reference/rest-api/http-interactive-execution.html
 - NAT authentication providers (api_key, oauth2 auth-code flow, http_basic_auth, bearer/credential validator, MCP service account; `authentication` YAML key, `redirect_uri` gotcha, per-user token isolation): https://docs.nvidia.com/nemo/agent-toolkit/latest/components/auth/api-authentication.html
 - NAT MCP authentication + secure per-user token storage (encrypted, in-memory/Redis/MySQL/S3, auto-refresh): https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/mcp/mcp-auth.html ; https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/mcp/mcp-auth-token-storage.html
 - EU AI Act human oversight — HITL / HOTL / human-in-command (HIC) (Art. 14): https://www.tandfonline.com/doi/full/10.1080/17579961.2023.2245683

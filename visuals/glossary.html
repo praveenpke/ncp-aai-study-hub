@@ -381,7 +381,7 @@
     <div class="term" data-doms="D6 D7">
       <div class="t-head"><span class="t-name">NeMo Retriever</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D7</span></span></div>
       <p class="def"><b>RAG retrieval</b> microservice family — embedding, indexing, search, reranking — served as NIMs.</p>
-      <p class="nv"><b>NVIDIA:</b> e.g. <code>llama-3.2-nv-embedqa-1b-v2</code> (embed) and <code>llama-3.2-nv-rerankqa-1b-v2</code> (rerank). <span class="pill a">version-dependent</span> these v2 APIs carry a 2026-05-18 deprecation date — check the current model card.</p>
+      <p class="nv"><b>NVIDIA:</b> e.g. <code>llama-nemotron-embed-1b-v2</code> (embed) and <code>llama-nemotron-rerank-1b-v2</code> (rerank). <span class="pill a">version-dependent</span> these supersede the older <code>nv-embedqa</code>/<code>nv-rerankqa</code> v2 NIMs (2026-05-18 deprecation) — check the current model card.</p>
       <p class="why"><b>Exam:</b> "NVIDIA service for embedding + reranking in RAG" → NeMo Retriever NIMs. Embedding ≠ reranking.</p>
     </div>
 
@@ -452,14 +452,14 @@
     <div class="term" data-doms="D6">
       <div class="t-head"><span class="t-name">Embedding</span><span class="t-doms"><span class="dtag">D6</span></span></div>
       <p class="def">A dense vector where <b>semantic similarity = geometric proximity</b>, enabling similarity search.</p>
-      <p class="nv"><b>NVIDIA:</b> NeMo Retriever embedding NIMs (e.g. <code>llama-3.2-nv-embedqa-1b-v2</code>).</p>
+      <p class="nv"><b>NVIDIA:</b> NeMo Retriever embedding NIMs (e.g. <code>llama-nemotron-embed-1b-v2</code>).</p>
       <p class="why"><b>Exam:</b> Embedding quality bounds <b>recall</b> — first tuning lever after chunking.</p>
     </div>
 
     <div class="term" data-doms="D6 D3">
       <div class="t-head"><span class="t-name">Reranking</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D3</span></span></div>
       <p class="def">A <b>second-stage cross-encoder</b> that re-scores first-stage candidates, catching query–doc interactions embeddings miss.</p>
-      <p class="nv"><b>NVIDIA:</b> NeMo Retriever rerank NIM (<code>llama-3.2-nv-rerankqa-1b-v2</code>); sits between retrieval and generation in AI-Q.</p>
+      <p class="nv"><b>NVIDIA:</b> NeMo Retriever rerank NIM (<code>llama-nemotron-rerank-1b-v2</code>, cross-encoder logit scorer; supersedes <code>llama-3.2-nv-rerankqa-1b-v2</code>); sits between retrieval and generation in AI-Q.</p>
       <p class="why"><b>Exam:</b> "Right docs retrieved but ranked too low" → add/tune a reranker (improves precision/NDCG).</p>
     </div>
 
@@ -608,14 +608,14 @@
     <div class="term" data-doms="D3">
       <div class="t-head"><span class="t-name">Tuning ladder</span><span class="t-alt">prompt → RAG → fine-tune → align</span><span class="t-doms"><span class="dtag">D3</span></span></div>
       <p class="def">Cheapest-fix-first escalation: (1) prompting → (2) RAG → (3) LoRA/QLoRA → (4) full SFT → (5) DPO/RLHF.</p>
-      <p class="nv"><b>NVIDIA:</b> NAT parameter optimizer = rung 1; NeMo Customizer = rungs 3–5.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT Config Optimizer (<code>nat optimize</code>) = rung 1; NeMo Customizer = rungs 3–5.</p>
       <p class="why"><b>Exam:</b> The single most-tested tuning principle. Fine-tuning = skills; RAG = facts.</p>
     </div>
 
     <div class="term" data-doms="D2 D3">
       <div class="t-head"><span class="t-name">Prompt engineering / Parameter optimization</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D3</span></span></div>
       <p class="def">Shaping behavior via instructions, few-shot, schemas, sampling params — and <b>automating</b> that search vs an eval set.</p>
-      <p class="nv"><b>NVIDIA:</b> NAT <b>Parameter / Agent Hyperparameter Optimizer</b> searches prompt wording, temperature, top-p, few-shot, tool descriptions.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT <b>Config Optimizer</b> (<code>nat optimize</code>, <code>[config-optimizer]</code> extra) searches prompt wording, temperature, top-p, few-shot, tool descriptions.</p>
       <p class="why"><b>Exam:</b> "Tune the agent without training" → parameter optimization (rung 1).</p>
     </div>
 
@@ -904,7 +904,7 @@
     <h4><span class="n">FIX 3</span> Generic "Content Safety NIM / Jailbreak NIM" names</h4>
     <p>The exact products are <b>Llama 3.1 NemoGuard 8B Content Safety</b>, <b>Llama 3.1 NemoGuard 8B Topic Control</b>, and <b>NemoGuard Jailbreak Detect</b>. NVIDIA's red-team tool is <b>garak</b>, and the current safety Blueprint is <b>Safety for Agentic AI</b>. <span class="fix">Use the exact names; generic ones are weaker distractors.</span></p>
   </div>
-  <div class="callout warn"><b>⚠ Version-dependent:</b> NeMo Retriever's <code>llama-3.2-nv-embedqa-1b-v2</code> / <code>nv-rerankqa-1b-v2</code> APIs carry a 2026-05-18 deprecation date. The <i>roles</i> (embedding NIM, reranking NIM) are stable; verify the specific model name on the current model card before quoting it.</div>
+  <div class="callout warn"><b>⚠ Version-dependent:</b> Current NeMo Retriever NIMs are <code>llama-nemotron-embed-1b-v2</code> / <code>llama-nemotron-rerank-1b-v2</code>; they supersede the older <code>llama-3.2-nv-embedqa-1b-v2</code> / <code>nv-rerankqa-1b-v2</code> (2026-05-18 deprecation). The <i>roles</i> (embedding NIM, reranking NIM) are stable; verify the specific model name on the current model card before quoting it.</div>
 </section>
 
 <!-- ============ QUIZ ============ -->
@@ -953,12 +953,12 @@
     <li>NAT agent types (8) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/index.html">docs.nvidia.com/nemo/agent-toolkit/…/agents</a></li>
     <li>NAT overview &amp; install — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html">docs.nvidia.com/nemo/agent-toolkit</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">github.com/NVIDIA/NeMo-Agent-Toolkit</a></li>
     <li>NAT A2A (client/server, A2A Python SDK) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/a2a-client.html">a2a-client</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/develop/docs/source/components/integrations/a2a.md">a2a integration</a></li>
-    <li>NAT as MCP server / FastMCP — <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.2/workflows/mcp/mcp-server.html">mcp-server</a></li>
+    <li>NAT as MCP server / FastMCP — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/mcp-server.html">mcp-server</a></li>
     <li>NeMo Guardrails rail categories (input/dialog/output/retrieval/execution) — <a href="https://docs.nvidia.com/nemo/guardrails/latest/user-guides/guardrails-process.html">guardrails-process</a> · <a href="https://docs.nvidia.com/nemo/guardrails/latest/about/overview.html">overview</a></li>
     <li>Safety NIMs — <a href="https://docs.nvidia.com/nim/llama-3-1-nemoguard-8b-contentsafety/latest/index.html">NemoGuard 8B Content Safety</a> · <a href="https://developer.nvidia.com/blog/safeguard-agentic-ai-systems-with-the-nvidia-safety-recipe/">Safety Recipe (Content Safety / Topic Control / Jailbreak Detect)</a></li>
     <li>garak (LLM vulnerability scanner) — <a href="https://github.com/NVIDIA/garak">github.com/NVIDIA/garak</a> · <a href="https://docs.nvidia.com/nemo/guardrails/latest/evaluation/llm-vulnerability-scanning">LLM vulnerability scanning</a></li>
     <li>Safety for Agentic AI Blueprint — <a href="https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai">github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai</a></li>
-    <li>NeMo Retriever models — <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard">embedqa-1b-v2</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard">rerankqa-1b-v2</a> · <a href="https://developer.nvidia.com/nemo-retriever">developer.nvidia.com/nemo-retriever</a></li>
+    <li>NeMo Retriever models — <a href="https://build.nvidia.com/nvidia/llama-nemotron-embed-1b-v2">llama-nemotron-embed-1b-v2</a> · <a href="https://build.nvidia.com/nvidia/llama-nemotron-rerank-1b-v2">llama-nemotron-rerank-1b-v2</a> · <a href="https://developer.nvidia.com/nemo-retriever">developer.nvidia.com/nemo-retriever</a></li>
     <li>NVIDIA Dynamo (disaggregated prefill/decode, KV-aware routing) — <a href="https://developer.nvidia.com/blog/introducing-nvidia-dynamo-a-low-latency-distributed-inference-framework-for-scaling-reasoning-ai-models/">developer.nvidia.com/blog/introducing-nvidia-dynamo</a> · <a href="https://github.com/ai-dynamo/dynamo">github.com/ai-dynamo/dynamo</a></li>
     <li>NeMo microservices (Customizer/Evaluator/Curator) — <a href="https://docs.nvidia.com/nemo/microservices/latest/about/index.html">docs.nvidia.com/nemo/microservices</a></li>
     <li>Data Flywheel Blueprint — <a href="https://github.com/NVIDIA-AI-Blueprints/data-flywheel">github.com/NVIDIA-AI-Blueprints/data-flywheel</a></li>

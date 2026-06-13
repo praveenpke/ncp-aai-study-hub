@@ -288,7 +288,7 @@ print(r.choices[0].message.content, "|", r.choices[0].finish_reason, r.usage.tot
         <div class="meta"><span class="pill g">CPU only</span><span class="pill b">Milestone 2–3</span></div>
       </div>
       <div class="body">
-        <p style="font-size:.86rem;color:var(--muted)">Package <code>nvidia-nat</code> · import name <code>nat</code> · CLI <code>nat</code> · needs <b>Python 3.10+</b>.</p>
+        <p style="font-size:.86rem;color:var(--muted)">Package <code>nvidia-nat</code> · import name <code>nat</code> · CLI <code>nat</code> · NAT v1.7 needs <b>Python 3.11–3.13</b>.</p>
         <pre class="code-block"><code>python -m venv nat-env && source nat-env/bin/activate   # Windows: nat-env\Scripts\activate
 pip install nvidia-nat
 nat --version        # logs help banner + version (e.g. 1.7.x) → verifies the install</code></pre>
@@ -430,7 +430,7 @@ print(ans.choices[0].message.content)</code></pre>
     <tr><td><b>NAT core</b> (agents, YAML, functions)</td><td><code>pip install nvidia-nat</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>Step 3 · D2</td></tr>
     <tr><td>NAT + LangChain</td><td><code>pip install nvidia-nat[langchain]</code> <i>(verify)</i></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D2/D6</td></tr>
     <tr><td>NAT evaluation (ragas, trajectory, red-team)</td><td><code>nvidia-nat[eval]</code> / <code>nvidia-nat-eval</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D3</td></tr>
-    <tr><td>NAT profiler / sizing calc</td><td><code>nvidia-nat[profiling]</code> (or in eval)</td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D3/D4</td></tr>
+    <tr><td>NAT profiler / sizing calc</td><td><code>nvidia-nat[profiler]</code> (or <code>nvidia-nat-profiler</code>)</td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D3/D4</td></tr>
     <tr><td>NAT observability (Phoenix)</td><td><code>pip install nvidia-nat arize-phoenix</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D8</td></tr>
     <tr><td><b>NeMo Guardrails — library mode</b></td><td><code>pip install nemoguardrails langchain-nvidia-ai-endpoints</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>Step 4 · D9</td></tr>
     <tr><td>NeMo Guardrails — server mode</td><td><code>pip install nemoguardrails[server]</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D9/D10</td></tr>
@@ -499,8 +499,8 @@ print(ans.choices[0].message.content)</code></pre>
     <tr><td class="bad"><code>404 Not Found</code></td><td>Wrong host or model name</td><td>Host <code>integrate.api.nvidia.com</code> (not <code>build…</code>); model id exact incl. <code>meta/</code> + <code>-instruct</code></td></tr>
     <tr><td class="bad"><code>429 Too Many Requests</code></td><td>Free-tier RPM/TPM limit</td><td>Wait ~60 s, slow request rate; check credits — <b>don't</b> regenerate the key</td></tr>
     <tr><td class="bad">New key returns <code>401</code> briefly</td><td>Key still propagating</td><td>Wait 2–5 min; confirm no copy/paste whitespace</td></tr>
-    <tr><td class="bad"><code>ModuleNotFoundError: 'nat'</code></td><td><code>nvidia-nat</code> not installed / wrong venv</td><td><code>pip install nvidia-nat</code>; check <code>which python</code> matches; Python 3.10+</td></tr>
-    <tr><td class="bad">NAT eval/profiler/langchain import fails</td><td>Extra not installed</td><td><code>pip install nvidia-nat[eval]</code> / <code>[profiling]</code> / <code>[langchain]</code> (verify name)</td></tr>
+    <tr><td class="bad"><code>ModuleNotFoundError: 'nat'</code></td><td><code>nvidia-nat</code> not installed / wrong venv</td><td><code>pip install nvidia-nat</code>; check <code>which python</code> matches; Python 3.11–3.13</td></tr>
+    <tr><td class="bad">NAT eval/profiler/langchain import fails</td><td>Extra not installed</td><td><code>pip install nvidia-nat[eval]</code> / <code>[profiler]</code> / <code>[langchain]</code> (verify name)</td></tr>
     <tr><td class="bad">NAT "invalid key" / "unknown field"</td><td>Field-name mismatch or YAML typo</td><td>Use current schema (<code>_type</code>, <code>model_name</code>, <code>tool_names</code>, <code>llm_name</code>); validate with <code>yaml.safe_load</code></td></tr>
     <tr><td class="bad">Agent runs but never calls a tool</td><td>Tool not registered / wrong agent type / no tool-use hint</td><td>Confirm <code>_type</code> matches the registered name; ensure agent type supports tool calling; add a hint</td></tr>
     <tr><td class="bad"><code>nemoguardrails chat</code> hangs/errors</td><td>model id, key, langchain pkg, or <code>colang_version</code> wrong</td><td>Verify all four: model on build.nvidia.com, key exported, <code>langchain-nvidia-ai-endpoints</code> installed, <code>colang_version: "2.x"</code></td></tr>

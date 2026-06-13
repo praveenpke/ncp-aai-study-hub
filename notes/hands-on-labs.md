@@ -102,7 +102,7 @@ print("finish:", r.choices[0].finish_reason, "| tokens:", r.usage.total_tokens)
 
 **Goal:** a NeMo Agent Toolkit agent that calls a tool, defined entirely in YAML.
 
-Install the toolkit (the import name is **`nat`**; the PyPI package is **`nvidia-nat`**; the CLI is **`nat`**). NAT requires **Python 3.10+**:
+Install the toolkit (the import name is **`nat`**; the PyPI package is **`nvidia-nat`**; the CLI is **`nat`**). NAT v1.7 requires **Python 3.11, 3.12, or 3.13**:
 
 ```bash
 python -m venv nat-env && source nat-env/bin/activate   # Windows: nat-env\Scripts\activate
@@ -295,7 +295,7 @@ What to `pip install` for each thing you'll build. The base `nvidia-nat` package
 | **NAT core** (agents, YAML, functions) | `pip install nvidia-nat` | `NVIDIA_API_KEY` | CPU | Step 3; D2 |
 | **NAT + LangChain** | `pip install nvidia-nat[langchain]` *(verify name)* | `NVIDIA_API_KEY` | CPU | D2/D6 |
 | **NAT evaluation** (ragas, trajectory, red-team) | `pip install nvidia-nat[eval]` *(or `nvidia-nat-eval`)* | `NVIDIA_API_KEY` | CPU | D3 |
-| **NAT profiler / sizing calc** | `pip install nvidia-nat[profiling]` *(or in eval)* | `NVIDIA_API_KEY` | CPU | D3/D4 |
+| **NAT profiler / sizing calc** | `pip install nvidia-nat[profiler]` *(or `nvidia-nat-profiler`)* | `NVIDIA_API_KEY` | CPU | D3/D4 |
 | **NAT observability (Phoenix)** | `pip install nvidia-nat arize-phoenix` | `NVIDIA_API_KEY` | CPU | D8 |
 | **NeMo Guardrails — library mode** | `pip install nemoguardrails langchain-nvidia-ai-endpoints` | `NVIDIA_API_KEY` | CPU | Step 4; D9 |
 | **NeMo Guardrails — server mode** | `pip install nemoguardrails[server]` | `NVIDIA_API_KEY` | CPU | D9/D10 (HTTP API) |
@@ -356,8 +356,8 @@ The **8 mandatory milestones** (each proves *real* platform interaction, not the
 | 2 | `404 Not Found` from the API | Wrong host or model name | Host is `integrate.api.nvidia.com` (not `build…`); model id exact incl. `meta/` + `-instruct` |
 | 3 | `429 Too Many Requests` | Free-tier RPM/TPM limit | Wait ~60 s, slow request rate; check remaining credits — **don't** regenerate the key |
 | 4 | New key returns `401` for a few minutes | Key still propagating | Wait 2-5 min; confirm no copy/paste whitespace |
-| 5 | `ModuleNotFoundError: No module named 'nat'` | `nvidia-nat` not installed / wrong venv | `pip install nvidia-nat`; check `which python` matches the install; Python 3.10+ |
-| 6 | NAT eval/profiler/langchain import fails | Extra not installed | `pip install nvidia-nat[eval]` / `[profiling]` / `[langchain]` (or the `nvidia-nat-*` distribution); verify name in current docs |
+| 5 | `ModuleNotFoundError: No module named 'nat'` | `nvidia-nat` not installed / wrong venv | `pip install nvidia-nat`; check `which python` matches the install; Python 3.11–3.13 |
+| 6 | NAT eval/profiler/langchain import fails | Extra not installed | `pip install nvidia-nat[eval]` / `[profiler]` / `[langchain]` (or the `nvidia-nat-*` distribution); verify name in current docs |
 | 7 | NAT config "invalid key" / "unknown field" | Old/new field-name mismatch or YAML typo | Use current schema (`_type`, `model_name`, `tool_names`, `llm_name`); validate with `yaml.safe_load` |
 | 8 | NAT agent runs but never calls a tool | Tool not registered, or wrong agent type, or prompt doesn't invite tool use | Confirm the `_type` matches the registered function name; ensure agent type supports tool calling; add a tool-use hint |
 | 9 | `nemoguardrails chat` hangs / errors on start | model id wrong, key unset, `langchain-nvidia-ai-endpoints` missing, or `colang_version` missing | Verify all four: model on build.nvidia.com, `NVIDIA_API_KEY` exported, the langchain pkg installed, `colang_version: "2.x"` set |

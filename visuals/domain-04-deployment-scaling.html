@@ -733,11 +733,11 @@ animate();
     <tr><td class="good"><b>FastAPI server</b></td><td><code>nat serve</code> (alias <code>nat start fastapi</code>) · REST + WebSocket · <b>:8000</b></td><td class="good"><b>Default production</b> — clients call the agent over HTTP/WS. OpenAI-compatible <code>/v1/chat/completions</code></td></tr>
     <tr><td class="info"><b>MCP server</b></td><td><code>nat mcp serve</code> · Model Context Protocol (MCP SDK)</td><td class="info">Agent must be <b>callable as a tool</b> by other MCP-compatible agents/orchestrators</td></tr>
     <tr><td><b>FastMCP server</b></td><td><code>nat fastmcp server run</code> · MCP streamable-HTTP · <b>:9902</b> at <code>/mcp</code></td><td>Lightweight / lower-overhead MCP; dev &amp; test of MCP integrations</td></tr>
-    <tr><td class="info"><b>A2A server</b></td><td><code>nvidia-nat[a2a]</code> · Agent-to-Agent (Linux Foundation standard)</td><td class="info"><b>Distributed multi-agent</b> — each agent an independent service; peers discovered via <b>Agent Cards</b>; scale/deploy each separately</td></tr>
+    <tr><td class="info"><b>A2A server</b></td><td><code>nat a2a serve</code> (pkg <code>nvidia-nat[a2a]</code>) · Agent-to-Agent (Linux Foundation standard) · <b>:10000</b></td><td class="info"><b>Distributed multi-agent</b> — each agent an independent service; peers discovered via <b>Agent Cards</b>; scale/deploy each separately</td></tr>
     <tr><td class="bad"><b>Console front end</b></td><td><code>nat run</code> · terminal / interactive</td><td class="bad"><b>Dev &amp; debugging only</b> — never production</td></tr>
   </table>
   </div>
-  <p style="font-size:.82rem;color:var(--muted);margin-top:8px"><b>FastAPI surface (NAT 1.5):</b> <code>POST /generate</code> · <code>/generate/stream</code> · <code>/chat</code> · <code>/chat/stream</code> · <code>/v1/chat/completions</code> (OpenAI-compatible) · <code>/websocket</code> · <code>GET /health</code> · <code>POST /evaluate</code>. Here <b>:8000 serves the agent</b>, not the raw model.</p>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:8px"><b>FastAPI surface (NAT 1.7):</b> <code>POST /generate</code> · <code>/generate/stream</code> · <code>/chat</code> · <code>/chat/stream</code> · <code>/v1/chat/completions</code> (OpenAI-compatible) · <code>/websocket</code> · <code>GET /health</code> · <code>POST /evaluate</code>. Here <b>:8000 serves the agent</b>, not the raw model.</p>
 
   <div class="grid g2" style="margin-top:16px">
     <div class="card" style="border-left:4px solid var(--green)">
@@ -1318,7 +1318,7 @@ animate();
     <tr><td>Clients call the agent over HTTP/WebSocket (default production)</td><td class="good"><b>FastAPI</b> (<code>nat serve</code>, :8000)</td><td>REST + streaming + OpenAI-compatible <code>/v1/chat/completions</code></td></tr>
     <tr><td>Agent must be callable <b>as a tool</b> by other MCP agents</td><td class="good"><b>MCP server</b> (<code>nat mcp serve</code>)</td><td>Publishes workflow + tools as MCP tools</td></tr>
     <tr><td>Lightweight / dev MCP integration</td><td class="info"><b>FastMCP</b> (:9902 <code>/mcp</code>)</td><td>Less overhead, streamable-HTTP</td></tr>
-    <tr><td>Distributed multi-agent, each agent an <b>independent service</b></td><td class="good"><b>A2A server</b> (<code>nvidia-nat[a2a]</code>)</td><td>Agent Cards for discovery; independent scaling per agent</td></tr>
+    <tr><td>Distributed multi-agent, each agent an <b>independent service</b></td><td class="good"><b>A2A server</b> (<code>nat a2a serve</code>, :10000)</td><td>Agent Cards for discovery; independent scaling per agent</td></tr>
     <tr><td>Local development / debugging only</td><td class="bad"><b>Console</b> (<code>nat run</code>)</td><td>Interactive terminal — never production</td></tr>
     <tr><td>Agent run takes 30 s+ (long research task)</td><td class="good"><b>Async job</b> (submit → job ID → poll, Dask)</td><td>Avoids timeouts/disconnects/retry storms — <b>not</b> a long-timeout sync call</td></tr>
   </table>

@@ -207,13 +207,13 @@ Section 3.2 establishes *what* NAT is ("not a framework — a profiler/wrapper")
 
 | `_type` | Pattern | Use when |
 |---|---|---|
-| **`tool_calling`** | Uses the LLM's *native* function-calling API to pick tools — implicit, fewest tokens | Model supports tool calling; you want speed |
-| **`react`** | Explicit **Thought → Action → Observation** loop in text; reasoning is visible in the trace | You want transparent reasoning / models without native tool calling |
-| **`reasoning`** | Plans the whole approach *up front*, then invokes a function — reasons "ahead of time," not between every step | A reasoning model (e.g. Nemotron with thinking on) should plan-then-act |
-| **`rewoo`** | **R**easoning **W**ith**o**ut **O**bservation — plans all tool calls before executing any, to cut LLM round-trips | Token/latency-sensitive multi-tool plans |
-| **`router`** | Classifies the request and routes to the right sub-agent/tool set | One endpoint must serve several specialized agents |
+| **`tool_calling_agent`** | Uses the LLM's *native* function-calling API to pick tools — implicit, fewest tokens | Model supports tool calling; you want speed |
+| **`react_agent`** | Explicit **Thought → Action → Observation** loop in text; reasoning is visible in the trace | You want transparent reasoning / models without native tool calling |
+| **`reasoning_agent`** | Plans the whole approach *up front*, then invokes a function — reasons "ahead of time," not between every step | A reasoning model (e.g. Nemotron with thinking on) should plan-then-act |
+| **`rewoo_agent`** | **R**easoning **W**ith**o**ut **O**bservation — plans all tool calls before executing any, to cut LLM round-trips | Token/latency-sensitive multi-tool plans |
+| **`router_agent`** | Classifies the request and routes to the right sub-agent/tool set | One endpoint must serve several specialized agents |
 
-The exam tell: **`tool_calling` = implicit/native, `react` = explicit thought-action-observation trace.** The same workflow swaps between them by changing one line (`type: tool_calling` → `type: react`); the trace changes from `[llm_call]/[tool_call]` to `[thought]/[action]/[observation]/[answer]`.
+The full 1.7 orchestrator set also includes `sequential_executor`, `parallel_executor`, `responses_api_agent`, and `auto_memory_wrapper`. The exam tell: **`tool_calling_agent` = implicit/native, `react_agent` = explicit thought-action-observation trace.** The same workflow swaps between them by changing one line (`_type: tool_calling_agent` → `_type: react_agent`); the trace changes from `[llm_call]/[tool_call]` to `[thought]/[action]/[observation]/[answer]`. (Earlier docs/snippets sometimes wrote the bare `tool_calling`/`react`; v1.7 `_type` strings carry the `_agent` suffix.)
 
 Minimal NAT workflow (CPU-only, hosted NIM — the canonical "first workflow"):
 
@@ -227,14 +227,14 @@ llms:
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.1
 workflow:
-  _type: tool_calling      # swap to react to see the Thought/Action/Observation trace
+  _type: tool_calling_agent   # swap to react_agent to see the Thought/Action/Observation trace
   llm_name: nim_llm
   tool_names: [get_current_time]
 ```
 ```bash
 nat run    --config_file workflow.yaml --input "What time is it right now?"
 nat serve  --config_file workflow.yaml         # REST endpoint + chat UI
-# nat console / nat chat give an interactive terminal session against the same config
+# interactive chat: use the `nat serve` chat UI; verify any console/chat subcommand against your installed version
 ```
 
 > **Note:** NAT field names shift across releases (e.g. `tools:` vs `tool_names:`, `agents:` vs top-level `workflow:`). Memorize the *concepts and agent-type names*; verify exact YAML keys against the docs for your installed version. Validate a config with `python -c "import yaml; yaml.safe_load(open('workflow.yaml'))"`.
@@ -272,7 +272,7 @@ The exam's "build the thing" questions follow a fixed ladder; every step below t
 
 1. **Account + API key** — create an NVIDIA account, get an `nvapi-` key at build.nvidia.com → `export NVIDIA_API_KEY=nvapi-...`.
 2. **First NIM call** — `pip install openai`; point the OpenAI client at `https://integrate.api.nvidia.com/v1`. (or `langchain-nvidia-ai-endpoints` for the LangChain path.)
-3. **First NAT workflow** — `pip install nvidia-nat`; write the minimal YAML above; `nat run`. Toggle `tool_calling`↔`react` to compare traces.
+3. **First NAT workflow** — `pip install nvidia-nat`; write the minimal YAML above; `nat run`. Toggle `tool_calling_agent`↔`react_agent` to compare traces.
 4. **First Guardrails run** — `pip install nemoguardrails langchain-nvidia-ai-endpoints` (the second package is **required** for `engine: nim`/`engine: nvidia_ai_endpoints` to reach hosted models — without it the config loads but model calls fail); build a `config/` folder with `config.yml` + Colang `.co` flows; test with `nemoguardrails chat --config config/`. Server mode (`nemoguardrails server`) needs the `[server]` extra (FastAPI/uvicorn).
 5. **Self-hosted NIM (optional/advanced, GPU required)** — get an **NGC** key at ngc.nvidia.com; `echo $NGC_API_KEY | docker login nvcr.io -u '$oauthtoken' --password-stdin` (username is literally `$oauthtoken`); `docker pull nvcr.io/nim/...`; run with `--gpus all -p 8000:8000`, mount a cache volume so the tens-of-GB engine download persists; check `GET /v1/health/ready` → `{"status":"ready"}`. **For multi-model / autoscaled production, use the NIM Operator on Kubernetes** (a `NIMService` custom resource declares model, replicas, GPU type, autoscaling).
 
@@ -283,7 +283,7 @@ The exam's "build the thing" questions follow a fixed ladder; every step below t
 | NAT core (agent types, YAML, functions, middleware) | `pip install nvidia-nat` |
 | LangChain/LangGraph plugin | `pip install "nvidia-nat[langchain]" langchain-nvidia-ai-endpoints` (or `nvidia-nat-langchain`) |
 | Evaluation / red-teaming / RAG eval | `pip install "nvidia-nat[eval]"` (or `nvidia-nat-eval`) |
-| Profiler + sizing calculator | `pip install "nvidia-nat[profiling]"` (may be folded into eval) |
+| Profiler + sizing calculator | `pip install "nvidia-nat[profiler]"` (or `nvidia-nat-profiler`; extra renamed from `[profiling]` in 1.5) |
 | MCP client/server | `pip install "nvidia-nat[mcp]"` |
 | Observability (Phoenix) | `pip install nvidia-nat arize-phoenix` |
 | Everything | `pip install "nvidia-nat[all]"` |
@@ -364,7 +364,7 @@ When to choose NVIDIA pieces over generic alternatives: pick NIM over plain vLLM
 11. **Hosted endpoints are not production-private.** If the scenario mentions regulated/PII data, the hosted build.nvidia.com endpoint is the wrong answer regardless of convenience — self-host the NIM.
 12. **Blueprints are reference code, not managed services.** You deploy and own them (Docker/Helm); "NVIDIA operates the virtual assistant for you" is false.
 13. **NAT middleware order is a correctness property.** Defense **before** caching, logging **first**. "Order doesn't matter as long as all middleware is present" is wrong: defense-after-caching lets a cached response skip safety checks; logging-after-defense means blocked requests go unlogged. And **cache tool results, never LLM responses**.
-14. **NAT agent types: `tool_calling` (implicit/native) vs `react` (explicit Thought→Action→Observation).** Don't confuse with `reasoning` (plans up front) or `rewoo` (plans all tool calls before any execution). The trick option labels the native-function-calling agent as "ReAct."
+14. **NAT agent types: `tool_calling_agent` (implicit/native) vs `react_agent` (explicit Thought→Action→Observation).** Don't confuse with `reasoning_agent` (plans up front) or `rewoo_agent` (plans all tool calls before any execution). The trick option labels the native-function-calling agent as "ReAct." (v1.7 `_type` strings carry the `_agent` suffix; bare `tool_calling`/`react` were the older form.)
 15. **`nat.builder` and YAML produce identical runtime behavior** — they compile to the same internal representation. The choice is authoring style only. "YAML is faster at runtime / behaves differently" is false.
 16. **NAT plugins adapt components, not whole frameworks.** A LangChain tool wrapped as a NAT function does *not* bring LangChain's runtime, memory, or orchestration — those stay NAT's. So "a LangChain agent runs identically inside NAT" is wrong.
 17. **`nat_test_llm` is for *testing* (deterministic correctness), not *evaluation* (quality).** Testing an agent against a real LLM is non-deterministic and flaky; mock the LLM to assert exact tool-call sequences. Reserve the real model for NeMo Evaluator-style quality scoring.
@@ -404,7 +404,7 @@ When to choose NVIDIA pieces over generic alternatives: pick NIM over plain vLLM
 - NeMo Evaluator blog — https://developer.nvidia.com/blog/streamline-evaluation-of-llms-for-accuracy-with-nvidia-nemo-evaluator/
 - NeMo Guardrails GitHub — https://github.com/NVIDIA/NeMo-Guardrails
 - NeMo Retriever — https://developer.nvidia.com/nemo-retriever ; reranker model card — https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard
-- NeMo Agent Toolkit GitHub & docs — https://github.com/NVIDIA/NeMo-Agent-Toolkit ; https://docs.nvidia.com/nemo/agent-toolkit/1.2/index.html ; A2A — https://docs.nvidia.com/nemo/agent-toolkit/1.6/components/integrations/a2a.html
+- NeMo Agent Toolkit GitHub & docs — https://github.com/NVIDIA/NeMo-Agent-Toolkit ; https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html (1.7) ; A2A — https://docs.nvidia.com/nemo/agent-toolkit/latest/components/integrations/a2a.html
 - Nemotron family — https://blogs.nvidia.com/blog/nemotron-model-families/ ; https://research.nvidia.com/labs/nemotron/Nemotron-3/ ; Llama-Nemotron paper — https://arxiv.org/abs/2505.00949
 - AI Enterprise lifecycle/branches — https://docs.nvidia.com/ai-enterprise/lifecycle/latest/lifecycle-policy.html ; https://docs.nvidia.com/ai-enterprise/planning-resource/release-branches/latest/release-branches.html
 - Blueprints — https://github.com/NVIDIA-AI-Blueprints ; AI virtual assistant — https://github.com/NVIDIA-AI-Blueprints/ai-virtual-assistant ; RAG blueprint — https://github.com/NVIDIA-AI-Blueprints/rag ; multimodal PDF pipeline blog — https://developer.nvidia.com/blog/build-an-enterprise-scale-multimodal-document-retrieval-pipeline-with-nvidia-nim-agent-blueprint/
@@ -597,12 +597,13 @@ What to notice: one base-model NIM multiplexes many NeMo Customizer (or HF PEFT)
 
 ```yaml
 # pipeline.yaml — the production-shaped NAT config (concept-level; verify exact keys per version)
-llm:
-  _type: nim
-  model_name: meta/llama-3.3-70b-instruct
-  api_key: ${NVIDIA_API_KEY}            # secret via env ref — never inline the key
+llms:
+  llm:                                  # named LLM map; referenced below by name
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    api_key: ${NVIDIA_API_KEY}          # secret via env ref — never inline the key
 workflow:
-  _type: tool_calling                   # or react / reasoning / rewoo / router
+  _type: tool_calling_agent             # or react_agent / reasoning_agent / rewoo_agent / router_agent
   llm_name: llm
   max_iterations: 10                    # cap the ReAct/tool loop so it can't spin forever
   middleware:                           # ORDER IS A SECURITY PROPERTY
