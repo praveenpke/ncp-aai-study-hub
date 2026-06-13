@@ -1077,7 +1077,7 @@ animate();
         <text x="180" y="118" text-anchor="middle" fill="#e8b339" font-size="10">activations cross only at stage boundaries → tolerates PCIe / inter-node</text>
       </svg>
       <ul class="tick" style="margin-top:8px">
-        <li><b>Raises throughput / enables bigger models</b>, but adds latency (pipeline bubbles)</li>
+        <li><b>Raises throughput / enables bigger models</b>, but adds latency (<b>pipeline bubbles</b> = a stage sits idle waiting on the previous one — GPU1 can't start layers 41–80 until GPU0 finishes 1–40 for that token)</li>
         <li>Typical: across nodes, or PCIe-only boxes</li>
         <li>Signal words: "two nodes", "PCIe only", "doesn't fit"</li>
       </ul>
@@ -1568,7 +1568,7 @@ spec:
     pods:
       metric: {name: gpu_cache_usage_perc}         # NIM's own /v1/metrics gauge, via prometheus-adapter
       target: {type: AverageValue, averageValue: 100m}   # 100m = scale when avg KV-cache usage &gt; 10%</code></pre>
-      <p><b style="color:var(--green)">What to notice:</b> the metric type is <code>Pods</code> and a custom metric — not <code>Resource: cpu</code> (trap #1). The full pipeline is NIM <code>/v1/metrics</code> → Prometheus scrape (ServiceMonitor) → prometheus-adapter rule republishing it on the custom-metrics API → HPA; without the adapter rule this YAML applies cleanly but never scales. Pick the <code>averageValue</code> threshold from your GenAI-Perf curves, not from defaults.</p>
+      <p><b style="color:var(--green)">What to notice:</b> the metric type is <code>Pods</code> and a custom metric — not <code>Resource: cpu</code> (trap #1). The <code>100m</code> is Kubernetes <b>milli-unit</b> notation (the same <code>m</code> as in <code>250m</code> CPU = ¼ core): <code>100m</code> = 0.1 of the metric's raw value. Since <code>gpu_cache_usage_perc</code> is reported as a 0–1 fraction, <code>100m</code> = 0.1 = scale out once average KV-cache occupancy crosses <b>10%</b> (it does <b>not</b> mean 100% or 100 ms). The full pipeline is NIM <code>/v1/metrics</code> → Prometheus scrape (ServiceMonitor) → prometheus-adapter rule republishing it on the custom-metrics API → HPA; without the adapter rule this YAML applies cleanly but never scales. Pick the <code>averageValue</code> threshold from your GenAI-Perf curves, not from defaults.</p>
     </div>
 
     <div class="card" style="border-top:3px solid var(--green)">
@@ -1582,7 +1582,7 @@ genai-perf profile \
   --output-tokens-mean 256 \
   --concurrency 32 --request-count 200 \
   --tokenizer meta-llama/Llama-3.1-8B-Instruct</code></pre>
-      <p><b style="color:var(--green)">What to notice:</b> the output table gives avg/p75/p90/p99 for <b>Time To First Token</b>, <b>Inter Token Latency</b>, request latency, plus <b>output token throughput (tok/s)</b> and <b>request throughput (RPS)</b> — read p90/p99 (SLOs), never just averages. ISL 2048 / OSL 256 is the agent traffic shape (long context, short decisions); re-run while sweeping <code>--concurrency</code> (1, 8, 32, 64...) and pick the knee where throughput flattens but latency still meets SLO. Note: NVIDIA's NIM benchmarking guide now ships <b>AIPerf</b> (<code>aiperf profile</code>, near-identical flags) as GenAI-Perf's successor — older docs/exam material say GenAI-Perf.</p>
+      <p><b style="color:var(--green)">What to notice:</b> the output table gives avg/p75/p90/p99 for <b>Time To First Token</b>, <b>Inter Token Latency</b>, request latency, plus <b>output token throughput (tok/s)</b> and <b>request throughput (RPS)</b> — read p90/p99 (SLOs), never just averages. ISL 2048 / OSL 256 is the agent traffic shape (long context, short decisions); re-run while sweeping <code>--concurrency</code> (1, 8, 32, 64...) and pick the knee where throughput flattens but latency still meets SLO. Note: NVIDIA's NIM benchmarking guide now leads with <b>AIPerf</b> (<code>aiperf profile</code>, near-identical flags) as its newer client-side tool — presented as complementary, not a hard replacement; <b>GenAI-Perf is still the name the NCP-AAI courseware/exam uses</b>, so expect GenAI-Perf on the test.</p>
     </div>
 
     <div class="card" style="border-top:3px solid var(--green)">
@@ -1640,20 +1640,21 @@ spec:
 import os
 from fastapi import FastAPI
 from langchain_nvidia_ai_endpoints import ChatNVIDIA   # pip install langchain-nvidia-ai-endpoints
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent              # LangChain/LangGraph 1.x canonical factory
+# (legacy: from langgraph.prebuilt import create_react_agent — deprecated in v1.0, removed in v2.0)
 
 llm = ChatNVIDIA(
     base_url=os.environ["NIM_BASE_URL"],                # e.g. http://nim-llm:8000/v1 (K8s Service DNS)
     model=os.environ.get("NIM_MODEL", "meta/llama-3.1-8b-instruct"),
 )
-agent = create_react_agent(llm, tools=[])               # your tools here; ChatNVIDIA supports bind_tools
+agent = create_agent(llm, tools=[])                     # your tools here; ChatNVIDIA supports bind_tools
 app = FastAPI()
 
 @app.post("/invoke")
 async def invoke(body: dict):
     result = await agent.ainvoke({"messages": [("user", body["query"])]})
     return {"answer": result["messages"][-1].content}
-# Dockerfile: FROM python:3.12-slim; pip install fastapi uvicorn langgraph langchain-nvidia-ai-endpoints
+# Dockerfile: FROM python:3.12-slim; pip install fastapi uvicorn langchain langgraph langchain-nvidia-ai-endpoints
 # CMD ["uvicorn", "agent_app:app", "--host", "0.0.0.0", "--port", "8080"]</code></pre>
       <p><b style="color:var(--green)">What to notice:</b> the agent Deployment scales on CPU/RPS with a vanilla HPA while the NIM Deployment scales on <code>gpu_cache_usage_perc</code> — decoupling them via <code>NIM_BASE_URL</code> is the architectural point (one agent request fans out into many LLM calls, so the two tiers have different scaling curves). Swapping <code>NIM_BASE_URL</code> to <code>https://integrate.api.nvidia.com/v1</code> + an <code>nvapi-</code> key moves the same agent onto build.nvidia.com with zero code change; <code>ChatNVIDIA</code> against a local NIM needs no API key.</p>
     </div>

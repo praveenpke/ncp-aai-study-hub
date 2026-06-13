@@ -180,7 +180,7 @@
 
 <header class="hero" id="top">
   <div class="hero-inner">
-    <div class="domain-chip">Reference <span class="pct">77 terms</span></div>
+    <div class="domain-chip">Reference <span class="pct">78 terms</span></div>
     <h1>The <span class="accent">Glossary</span></h1>
     <p class="hook">Every NCP-AAI term in one place — <b>agent patterns, NAT/NeMo/NIM products, eval metrics, guardrails, inference, and protocols</b>. Each entry: a plain definition, the <b>exact NVIDIA name &amp; context</b>, <b>why it matters for the exam</b>, and the domains it belongs to. <b>Filter by domain</b> below to study one slice at a time.</p>
   </div>
@@ -240,7 +240,7 @@
       <p class="why"><b>Exam:</b> Know the coordination shapes (router / sequential / hierarchical / A2A peer) and when each applies.</p>
     </div>
 
-    <div class="term" data-doms="D1 D2 D5">
+    <div class="term" data-doms="D1 D3">
       <div class="t-head"><span class="t-name">Compound error</span><span class="t-alt">why agents are hard</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D3</span></span></div>
       <p class="def">End-to-end success ≈ <code>p_step ^ n_steps</code> — per-step accuracies <b>multiply</b>.</p>
       <p class="nv"><b>NVIDIA:</b> Drives "fewer steps / higher per-step reliability / verification" guidance.</p>
@@ -385,7 +385,7 @@
       <p class="why"><b>Exam:</b> "NVIDIA service for embedding + reranking in RAG" → NeMo Retriever NIMs. Embedding ≠ reranking.</p>
     </div>
 
-    <div class="term" data-doms="D9 D6">
+    <div class="term" data-doms="D3 D4 D6 D7 D8 D9">
       <div class="t-head"><span class="t-name">NeMo (family)</span><span class="t-alt">don't conflate the five</span><span class="t-doms"><span class="dtag">D7</span></span></div>
       <p class="def">The five lifecycle microservices: <b>Customizer</b> (fine-tune) · <b>Evaluator</b> (eval) · <b>Curator</b> (data) · <b>Retriever</b> (RAG) · <b>Guardrails</b> (safety).</p>
       <p class="nv"><b>NVIDIA:</b> Distinct products — "NeMo" the platform ≠ any one of them.</p>
@@ -571,7 +571,7 @@
 
     <div class="term" data-doms="D3">
       <div class="t-head"><span class="t-name">pass@k vs pass^k</span><span class="t-doms"><span class="dtag">D3</span></span></div>
-      <p class="def"><b>pass@k</b> = at least one success in k tries (capability). <b>pass^k</b> = all k succeed (reliability).</p>
+      <p class="def"><b>pass@k</b> = at least one success in k tries (capability). <b>pass^k</b> = all k succeed (reliability). <b>Example:</b> an agent that's right 80% per try has <b>pass@3 ≈ 0.99</b> (1−0.2³) but <b>pass^3 ≈ 0.51</b> (0.8³) — "can do it" vs "does it every time" diverge sharply.</p>
       <p class="nv"><b>NVIDIA:</b> Production gates care about <b>pass^k</b> (consistency).</p>
       <p class="why"><b>Exam:</b> "Works sometimes, not reliably" → gate on pass^k, not pass@k.</p>
     </div>
@@ -688,7 +688,7 @@
   </div>
 
   <div class="catcard" data-cat>
-    <div class="cat-head"><span class="cat-ic">🚨</span><h3>Safety NIMs, attacks &amp; auditing</h3><span class="cnt">5 terms</span></div>
+    <div class="cat-head"><span class="cat-ic">🚨</span><h3>Safety NIMs, attacks &amp; auditing</h3><span class="cnt">6 terms</span></div>
 
     <div class="term" data-doms="D9">
       <div class="t-head"><span class="t-name">Safety NIMs (NemoGuard family)</span><span class="t-doms"><span class="dtag">D9</span></span></div>
@@ -723,6 +723,13 @@
       <p class="def">NVIDIA Blueprint improving <b>safety, security &amp; privacy at build, deploy &amp; run</b> stages — the home for pre-deployment auditing (bias/safety/policy).</p>
       <p class="nv"><b>NVIDIA:</b> Supersedes the older standalone "Safety Blueprint"; works with garak + Guardrails + Safety NIMs.</p>
       <p class="why"><b>Exam:</b> Pre-deployment auditing (before ship) vs runtime guardrails (live) — both in the safety lifecycle.</p>
+    </div>
+
+    <div class="term" data-doms="D9">
+      <div class="t-head"><span class="t-name">OWASP risk taxonomies</span><span class="t-alt">LLM Top 10 + Agentic Apps Top 10</span><span class="t-doms"><span class="dtag">D9</span></span></div>
+      <p class="def">The industry threat checklists. <b>LLM Top 10 (2025)</b>: prompt injection (LLM01), sensitive-info disclosure, supply chain, data/model poisoning, excessive agency, etc. <b>Agentic Apps Top 10 (2026)</b>: agent goal hijack, tool misuse, identity/privilege abuse, memory poisoning, insecure inter-agent comms, rogue agents.</p>
+      <p class="nv"><b>NVIDIA:</b> Guardrails + NemoGuard map to these (injection→input rails, tool misuse→execution rails); garak red-teams against them; Safety for Agentic AI Blueprint operationalizes them.</p>
+      <p class="why"><b>Exam:</b> Cite <b>both</b> lists — prompt injection / goal hijack is #1 on each. The <b>Agentic 2026 list (Dec 9, 2025)</b> covers the agent-specific surface (rogue agents, inter-agent comms, cascading failures) the LLM list misses.</p>
     </div>
   </div>
 </section>
@@ -786,6 +793,7 @@
         <div class="t-head"><span class="t-name">MCP (Model Context Protocol)</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D7</span></span></div>
         <p class="def">Open standard ("USB-C for AI tools") for <b>dynamic tool discovery + invocation</b>: a server exposes tools/resources/prompts; a client connects at runtime to discover and call them.</p>
         <p class="nv"><b>NVIDIA:</b> NAT is both <b>MCP client</b> (consume remote tools) and <b>MCP server</b> (publish functions, incl. <b>FastMCP</b>). Transports: stdio (local) / streamable HTTP (remote).</p>
+        <p class="nv"><b>2026:</b> Now <b>vendor-neutral under the Linux Foundation</b> — joined the new <b>Agentic AI Foundation (AAIF)</b> (Dec 2025). Not "Anthropic's protocol" anymore.</p>
         <p class="why"><b>Exam:</b> "Discover tools at runtime across a boundary" → MCP. Three primitives: tools/resources/prompts. Third-party servers = injection surface.</p>
       </div>
     </div>
@@ -793,8 +801,9 @@
       <div class="cat-head"><span class="cat-ic">🤝</span><h3>A2A</h3><span class="cnt">1 term</span></div>
       <div class="term" data-doms="D1 D7">
         <div class="t-head"><span class="t-name">A2A (Agent-to-Agent)</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D7</span></span></div>
-        <p class="def">Protocol for <b>inter-agent</b> messaging — typed payloads, task delegation, status tracking, agent <b>discovery</b> between deployed agent services.</p>
+        <p class="def">Protocol for <b>inter-agent</b> messaging — typed payloads, task delegation, status tracking, agent <b>discovery</b> (via <b>Agent Cards</b>) between deployed agent services.</p>
         <p class="nv"><b>NVIDIA:</b> NAT as A2A <b>client</b> (delegate to remote agents) and <b>server</b> (publish a workflow as a discoverable agent), built on the <b>official A2A Python SDK</b> with auth.</p>
+        <p class="nv"><b>2026:</b> Donated to the <b>Linux Foundation</b> (under AAIF); reached <b>v1.0</b> with <b>Signed Agent Cards</b> (cryptographic identity). Not "Google's v0.x" anymore.</p>
         <p class="why"><b>Exam:</b> "Build a team of distributed agents that delegate to each other" → A2A. Don't swap with MCP.</p>
       </div>
     </div>

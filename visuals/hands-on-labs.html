@@ -277,6 +277,7 @@ r = client.chat.completions.create(model="meta/llama-3.3-70b-instruct",
         max_tokens=80, temperature=0.2)
 print(r.choices[0].message.content, "|", r.choices[0].finish_reason, r.usage.total_tokens)</code></pre>
         <div class="expect"><span class="ic">✓</span><div><b>Expected:</b> a chat completion with <code>message.content</code>, <code>finish_reason:"stop"</code>, and a <code>usage.total_tokens</code> count. <code>finish_reason:"length"</code> means you hit <code>max_tokens</code> (truncated). <span class="artifact"><b>Artifact:</b> saved response + token count.</span></div></div>
+        <div class="callout"><b>Which model? (June 2026.)</b> The labs default to <code>meta/llama-3.3-70b-instruct</code> — stable, tool-calling-capable, least likely to break a copy-paste command. Know that the <b>current NVIDIA headline family is Nemotron 3</b> (Dec 2025 → Computex June 2026): <b>Nano</b> (~30B/3B active, <code>nvidia/nemotron-3-nano-30b-a3b</code>), <b>Super</b> (~100B/10B), <b>Ultra</b> (~500–550B/50–55B — NVIDIA's largest open model, for reasoning/planning/agentic), plus multimodal <b>Nano Omni</b>. Any is a drop-in swap — change only <code>model_name</code>/<code>model</code>. Pick by capability lane, don't hard-code "best model." <b>Catalog id vs HF repo:</b> the hosted <code>model</code> field wants the lowercase <i>catalog id</i> (<code>nvidia/nemotron-3-nano-30b-a3b</code>); Hugging Face <i>weight repos</i> use a longer name with a precision suffix (<code>nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16</code>/<code>-FP8</code>). Pasting an HF repo name into a hosted call → 404.</div>
       </div>
     </div>
 
@@ -382,7 +383,7 @@ curl -s http://localhost:8000/v1/health/ready      # → {"status":"ready"} when
         <div class="meta"><span class="pill g">CPU (study)</span><span class="pill b">Milestone 6</span></div>
       </div>
       <div class="body">
-        <p style="font-size:.86rem;color:var(--muted)"><b>Blueprints</b> are production-grade <i>reference architectures</i> (not tutorials) at <a href="https://build.nvidia.com/blueprints" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">build.nvidia.com/blueprints</a>. The <b>AI-Q Research Assistant</b> is built on the <b>NeMo Agent Toolkit</b> (+ LangChain Deep Agents): an orchestrator classifies intent, a shallow agent gives quick cited answers, a deep agent writes long-form cited reports. Repo: <a href="https://github.com/NVIDIA-AI-Blueprints/aiq" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">github.com/NVIDIA-AI-Blueprints/aiq</a>.</p>
+        <p style="font-size:.86rem;color:var(--muted)"><b>Blueprints</b> are production-grade <i>reference architectures</i> (not tutorials) at <a href="https://build.nvidia.com/blueprints" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">build.nvidia.com/blueprints</a>. The <b>AI-Q Research Assistant</b> is built on the <b>NeMo Agent Toolkit</b> (+ LangChain Deep Agents): an orchestrator classifies intent, a shallow agent gives quick cited answers, a deep agent writes long-form cited reports. Repo: <a href="https://github.com/NVIDIA-AI-Blueprints/aiq" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">github.com/NVIDIA-AI-Blueprints/aiq</a>. As of June 2026 it's on the <b>v2.x</b> line and its <i>default</i> models moved to the <b>Nemotron 3</b> family (<code>nvidia/nemotron-3-nano-30b-a3b</code>) with the renamed retriever embedder <code>nvidia/llama-nemotron-embed-vl-1b-v2</code>. The CPU reproduction below keeps the still-live <code>llama-3.3-70b-instruct</code> + <code>nv-embedqa-e5-v5</code> so it runs anywhere — the architecture lesson is identical.</p>
         <pre class="code-block"><code>import os, numpy as np, faiss
 from openai import OpenAI
 c = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
@@ -408,9 +409,9 @@ print(ans.choices[0].message.content)</code></pre>
   <h3>The Blueprint, mapped — NVIDIA-specific vs generic <span class="tag">don't assume it's all proprietary</span></h3>
   <div class="tbl-scroll"><table class="tbl">
     <tr><th>Component</th><th>Role</th><th>Full Blueprint</th><th>Your CPU reproduction</th></tr>
-    <tr><td><b>LLM</b></td><td>reasoning / generation</td><td>NIM on GPU</td><td class="good">NIM hosted API</td></tr>
-    <tr><td><b>Embedding</b></td><td>text → vectors</td><td>NIM on GPU</td><td class="good"><code>nvidia/nv-embedqa-e5-v5</code> (1024-dim)</td></tr>
-    <tr><td><b>Reranker</b></td><td>re-score passages</td><td>NIM on GPU</td><td class="good"><code>nvidia/nv-rerankqa-mistral-4b-v3</code></td></tr>
+    <tr><td><b>LLM</b></td><td>reasoning / generation</td><td>NIM on GPU <span style="color:var(--muted)">(v2.x: Nemotron 3 Nano 30B)</span></td><td class="good">NIM hosted API</td></tr>
+    <tr><td><b>Embedding</b></td><td>text → vectors</td><td>NIM on GPU <span style="color:var(--muted)">(<code>llama-nemotron-embed-vl-1b-v2</code>)</span></td><td class="good"><code>nvidia/nv-embedqa-e5-v5</code> (1024-dim)</td></tr>
+    <tr><td><b>Reranker</b></td><td>re-score passages</td><td>NIM on GPU <span style="color:var(--muted)">(<code>llama-nemotron-rerank-1b-v2</code>)</span></td><td class="good"><code>nvidia/llama-nemotron-rerank-1b-v2</code> <span style="color:var(--muted)">(older <code>nv-rerankqa-mistral-4b-v3</code> now deprecated)</span></td></tr>
     <tr><td>Vector store</td><td>similarity search</td><td><b>Milvus</b> (containerized)</td><td class="mid">FAISS (<code>faiss-cpu</code>, in-memory)</td></tr>
     <tr><td>Doc parsing</td><td>PDF/table extraction</td><td><b>NeMo Retriever</b></td><td class="mid">PyPDF / hardcoded text</td></tr>
     <tr><td>Orchestration</td><td>the agent</td><td><b>NeMo Agent Toolkit</b></td><td class="mid">a Python script</td></tr>

@@ -295,7 +295,7 @@ Did the agent pick the **right tool** with **schema-valid, correct arguments**? 
 **Domains:** D3, D6.
 
 ### pass@k vs pass^k
-**pass@k** = at least one success in k tries (the *capability* metric; HumanEval-style). **pass^k** = all k tries succeed (the *reliability* metric).
+**pass@k** = at least one success in k tries (the *capability* metric; HumanEval-style). **pass^k** = all k tries succeed (the *reliability* metric). *Example:* at 80% per-try accuracy, **pass@3 ≈ 0.99** (1 − 0.2³) but **pass^3 ≈ 0.51** (0.8³) — "can do it once" and "does it every time" diverge sharply, which is exactly why a demo passes but production flakes.
 **NVIDIA context:** Production gates care about **pass^k** (consistency), not just whether the agent *can* do it once.
 **Why it matters:** A stochastic agent can have high pass@k but low pass^k. "Works sometimes but not reliably" → you're measuring the wrong one; gate on pass^k.
 **Domains:** D3.
@@ -410,6 +410,12 @@ NVIDIA's Blueprint to improve **safety, security, and privacy at build, deploy, 
 **Why it matters:** Distinguish **pre-deployment auditing** (catch issues before ship) from **runtime guardrails** (catch them live). Both belong to the safety lifecycle.
 **Domains:** D9.
 
+### OWASP risk taxonomies (LLM Top 10 + Agentic Apps Top 10)
+The two industry-standard threat checklists for AI security. **OWASP Top 10 for LLM Applications 2025** (`LLM01:2025`…`LLM10:2025`) covers app-level LLM risks — *Prompt Injection* (LLM01), Sensitive Info Disclosure, Supply Chain, Data/Model Poisoning, Improper Output Handling, Excessive Agency, System Prompt Leakage, Vector/Embedding Weaknesses, Misinformation, Unbounded Consumption. **OWASP Top 10 for Agentic Applications (2026)** (released **Dec 9, 2025** by the OWASP GenAI Security Project) is the agent-specific list — *Agent Goal Hijack*, Tool Misuse, Identity & Privilege Abuse, Agentic Supply Chain, Unexpected Code Execution, Memory & Context Poisoning, Insecure Inter-Agent Communication, Cascading Failures, Human-Agent Trust Exploitation, Rogue Agents.
+**NVIDIA context:** NVIDIA's safety stack maps to these risks — Guardrails input rails + NemoGuard Jailbreak Detect address prompt injection/goal hijack; execution rails + tool-call eval address tool misuse; garak red-teams against them; the Safety for Agentic AI Blueprint operationalizes them.
+**Why it matters:** A current agentic guide should cite **both** lists. Prompt injection is the #1 risk on both (LLM01 / Agent Goal Hijack). Don't cite only the 2025 LLM list and miss the agent-specific 2026 list — agentic-specific risks (rogue agents, inter-agent comms, cascading failures, memory poisoning) are exactly the NCP-AAI threat surface.
+**Domains:** D9.
+
 ---
 
 ## §7 — Deployment, serving & inference
@@ -451,12 +457,14 @@ Constraining the decoder so output **must** conform to a schema/grammar/regex/ch
 ### MCP (Model Context Protocol)
 An open standard ("USB-C for AI tools") for **dynamic tool discovery and invocation**: an MCP **server** exposes tools (plus resources and prompts) with standard descriptions; an MCP **client** connects at runtime to discover and call them.
 **NVIDIA context:** NAT can be an **MCP client** (consume remote tools in a workflow) and an **MCP server** (publish workflow functions as tools, including via **FastMCP**). Transports: stdio (local) or streamable HTTP (remote).
+**Currency (2026):** Originally introduced by Anthropic, MCP is now **vendor-neutral under the Linux Foundation** — it joined the new **Agentic AI Foundation (AAIF)** (announced Dec 9, 2025, co-founded by Anthropic, OpenAI, and Block) alongside goose and AGENTS.md. Describe it as an open Linux-Foundation standard, not "Anthropic's protocol."
 **Why it matters:** "Discover tools at runtime across a boundary, standardized" → MCP. Know the three primitives (tools/resources/prompts) and that NAT is both client and server. Third-party MCP servers are an injection/supply-chain surface.
 **Domains:** D2, D7.
 
 ### A2A (Agent-to-Agent Protocol)
-A protocol for **inter-agent** messaging: typed payloads, task delegation, status tracking, and agent **discovery** between independently deployed agent services.
+A protocol for **inter-agent** messaging: typed payloads, task delegation, status tracking, and agent **discovery** (via **Agent Cards**) between independently deployed agent services.
 **NVIDIA context:** NAT supports A2A as **client** (delegate to remote agents) and **server** (publish a workflow as a discoverable A2A agent), built on the **official A2A Python SDK**, with authentication support.
+**Currency (2026):** Originally Google's; **donated to the Linux Foundation** (mid-2025), now governed there alongside MCP under the **Agentic AI Foundation (AAIF)** umbrella. **A2A reached v1.0 (early 2026)** — production-grade, adding **Signed Agent Cards** (cryptographic identity/domain verification), multi-tenancy, and version negotiation (v0.x→v1.0 backward-compat). Don't describe it as "Google's v0.x protocol."
 **Why it matters:** **MCP = agent↔tools; A2A = agent↔agent.** "Build a team of distributed agents that delegate to each other" → A2A. Don't swap the two.
 **Domains:** D1, D7.
 

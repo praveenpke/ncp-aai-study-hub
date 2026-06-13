@@ -261,7 +261,7 @@
 
         <rect x="746" y="20" width="150" height="56" rx="9" fill="none" style="stroke:var(--cyan)"/>
         <text x="821" y="42" text-anchor="middle" style="fill:var(--cyan)" font-weight="700">Embedding NIM</text>
-        <text x="821" y="59" text-anchor="middle" style="fill:var(--muted)">input_type: passage</text>
+        <text x="821" y="59" text-anchor="middle" style="fill:var(--muted)">llama-nemotron-embed · passage</text>
 
         <rect x="700" y="130" width="200" height="60" rx="9" style="fill:var(--panel2);stroke:var(--green)"/>
         <text x="800" y="153" text-anchor="middle" style="fill:var(--green)" font-weight="700">Vector DB + ANN</text>
@@ -343,14 +343,15 @@
 <section id="embed-index">
   <h2>Embeddings, vector DBs &amp; ANN indexes</h2>
   <p class="lede">A bi-encoder encodes query and passage <b>independently</b>; cosine/dot similarity ≈ relevance. Key properties: dimension (Matryoshka lets you truncate for cheaper search), max input tokens, domain coverage, and <b>asymmetry</b> — retrieval embedders use distinct <code>input_type="query"</code> vs <code>"passage"</code> modes. Using the same mode for both silently degrades retrieval.</p>
-  <div class="callout"><b>Distance metric — a property of the model, not a free knob.</b> <b>Cosine</b> (magnitude-invariant) is the safe text default; <b>dot/inner-product</b> equals cosine <i>when vectors are L2-normalized</i> and is what many embedders optimize; <b>L2/Euclidean</b> is rarely right for normalized text embeddings. Mismatching it (e.g. an IP-trained model queried with L2) quietly tanks recall. Milvus <code>metric_type="COSINE"/"IP"/"L2"</code>; pgvector <code>vector_cosine_ops</code> / <code>vector_ip_ops</code> / <code>vector_l2_ops</code>.</div>
+  <div class="callout"><b>Distance metric — a property of the model, not a free knob.</b> <b>Cosine</b> (magnitude-invariant) is the safe text default; <b>dot/inner-product</b> equals cosine <i>when vectors are L2-normalized</i> (normalizing forces every vector to length 1, so the only thing left to compare is direction — exactly what cosine measures) and IP is what many embedders optimize; <b>L2/Euclidean</b> is rarely right for normalized text embeddings. Mismatching it quietly tanks recall: e.g. a model trained on cosine but indexed with raw L2 will rank a long, generic chunk (big magnitude) above a short, on-topic one, because Euclidean distance is fooled by vector length. Milvus <code>metric_type="COSINE"/"IP"/"L2"</code>; pgvector <code>vector_cosine_ops</code> / <code>vector_ip_ops</code> / <code>vector_l2_ops</code>.</div>
 
   <h3>NeMo Retriever embedding NIMs</h3>
   <div class="grid c3">
-    <div class="card green"><h4><span class="icon">⭐</span>llama-3.2-nv-embedqa-1b-v2</h4><p>Current flagship: <b>multilingual (26 languages)</b>, <b>8192-token max input</b>, Matryoshka-configurable to <b>384/512/768/1024/2048</b> dims, asymmetric <code>input_type</code>.</p></div>
-    <div class="card blue"><h4><span class="icon">🇬🇧</span>nv-embedqa-e5-v5</h4><p>English QA embedder.</p></div>
-    <div class="card blue"><h4><span class="icon">🌐</span>nv-embedqa-mistral-7b-v2</h4><p>Multilingual. All served as NIM containers with an OpenAI-compatible <code>/v1/embeddings</code> API.</p></div>
+    <div class="card green"><h4><span class="icon">⭐</span>llama-nemotron-embed-1b-v2</h4><p>Current flagship — <b>renamed in NeMo Retriever NIM 1.13.0</b> from <code>llama-3.2-nv-embedqa-1b-v2</code> (exam material may still use the old name). <b>Multilingual (26 languages)</b>, <b>8192-token max input</b>, Matryoshka-configurable to <b>384/512/768/1024/2048</b> dims, asymmetric <code>input_type</code>.</p></div>
+    <div class="card blue"><h4><span class="icon">🔢</span>llama-nemotron-embed-300m-v2</h4><p>Smaller 300M sibling (was <code>llama-3.2-nemoretriever-300m-embed-v2</code>); also a vision-language <code>llama-nemotron-embed-vl-1b-v2</code>.</p></div>
+    <div class="card blue"><h4><span class="icon">🌐</span>nv-embedqa-e5-v5 / mistral-7b-v2</h4><p>Older English-QA and multilingual embedders. All served as NIM containers with an OpenAI-compatible <code>/v1/embeddings</code> API.</p></div>
   </div>
+  <div class="callout"><b>2026 branding note:</b> NVIDIA now markets this embed/rerank/extract model collection as <b>"Nemotron RAG"</b> (the Hugging Face collection label), while <b>NeMo Retriever</b> stays the platform/stack name (NeMo Retriever Library + Nemotron Retriever open models + NIM microservices). If you see "Nemotron RAG models," it's the same family — recognize the label, don't treat it as a new product.</div>
 
   <h3>Vector stores <span class="tag">database vs library</span></h3>
   <div class="tbl-scroll"><table class="tbl">
@@ -405,7 +406,7 @@
       <li>Pattern: retrieve wide (top 40–100) → rerank → keep top 3–5</li>
     </ul></div>
     <div class="card purple"><h4><span class="icon">🧩</span>NVIDIA reranking NIM</h4>
-      <p><b><code>llama-3.2-nv-rerankqa-1b-v2</code></b> — multilingual companion to the embedding NIM. Predecessor: <code>nv-rerankqa-mistral-4b-v3</code> (a truncated, LoRA-tuned Mistral with a binary relevance head).</p>
+      <p><b><code>llama-nemotron-rerank-1b-v2</code></b> — multilingual companion to the embedding NIM (<b>renamed in NeMo Retriever NIM 1.13.0</b> from <code>llama-3.2-nv-rerankqa-1b-v2</code>; VL variant <code>llama-nemotron-rerank-vl-1b-v2</code>). Predecessor: <code>nv-rerankqa-mistral-4b-v3</code> (a truncated, LoRA-tuned Mistral with a binary relevance head).</p>
       <p style="margin-top:8px"><b>Latency is the price</b> — budget reranking only over the shortlist.</p></div>
   </div>
 </section>
@@ -476,8 +477,8 @@
   <p class="lede">The NIM/Retriever stack buys you GPU-optimized, containerized, OpenAI-API-compatible pieces that slot into LangChain/LlamaIndex unchanged. The <i>concepts</i> (bi-encoder, cross-encoder, ANN, RRF) are identical to open source — exam questions mostly test that you can <b>map concept → NVIDIA product name</b>.</p>
   <div class="tbl-scroll"><table class="tbl">
     <tr><th>NVIDIA tool</th><th>Role</th><th>Key facts</th></tr>
-    <tr><td><b>NeMo Retriever embedding NIMs</b></td><td>Embedding stage as a container</td><td><code>llama-3.2-nv-embedqa-1b-v2</code> (26 langs, 8192-token input, Matryoshka 384–2048, asymmetric <code>input_type</code>); also <code>nv-embedqa-e5-v5</code>, <code>nv-embedqa-mistral-7b-v2</code>. LangChain: <code>NVIDIAEmbeddings</code></td></tr>
-    <tr><td><b>NeMo Retriever reranking NIM</b></td><td>Precision stage (cross-encoder)</td><td><code>llama-3.2-nv-rerankqa-1b-v2</code> (current), <code>nv-rerankqa-mistral-4b-v3</code> (prior). LangChain: <code>NVIDIARerank</code> → <code>ContextualCompressionRetriever</code></td></tr>
+    <tr><td><b>NeMo Retriever embedding NIMs</b></td><td>Embedding stage as a container</td><td><code>llama-nemotron-embed-1b-v2</code> (renamed in NIM 1.13.0 from <code>llama-3.2-nv-embedqa-1b-v2</code>; 26 langs, 8192-token input, Matryoshka 384–2048, asymmetric <code>input_type</code>); also <code>llama-nemotron-embed-300m-v2</code>, VL <code>llama-nemotron-embed-vl-1b-v2</code>. LangChain: <code>NVIDIAEmbeddings</code></td></tr>
+    <tr><td><b>NeMo Retriever reranking NIM</b></td><td>Precision stage (cross-encoder)</td><td><code>llama-nemotron-rerank-1b-v2</code> (current — renamed in NIM 1.13.0 from <code>llama-3.2-nv-rerankqa-1b-v2</code>), <code>nv-rerankqa-mistral-4b-v3</code> (prior). LangChain: <code>NVIDIARerank</code> → <code>ContextualCompressionRetriever</code></td></tr>
     <tr><td><b>NV-Ingest / extraction</b></td><td>Multimodal document extraction</td><td>Fluent <code>Ingestor</code>: <code>.files().extract(...).embed().vdb_upload().ingest()</code>; named NIMs <code>nemoretriever-page-elements-v2</code> / <code>-table-structure-v1</code> / <code>-graphic-elements-v1</code> + <b>PaddleOCR</b>; newest releases ship as <code>nemo-retriever</code> (<code>create_ingestor</code>)</td></tr>
     <tr><td><b>PaddleOCR</b></td><td>The OCR engine inside NV-Ingest / Blueprints</td><td>Reads characters from scanned pages &amp; images (Apache-2.0); pairs with the detector NIMs that handle layout. The exam's named "document-processing OCR" component</td></tr>
     <tr><td><b>Milvus (+ cuVS / CAGRA)</b></td><td>NVIDIA's default vector DB</td><td>Dense + sparse(BM25) + <code>hybrid_search</code> with <code>RRFRanker</code>/<code>WeightedRanker</code>; metadata filters; GPU indexes via <b>cuVS</b> (<code>GPU_CAGRA</code>/<code>GPU_IVF_FLAT</code>/<code>GPU_IVF_PQ</code>); CAGRA ≈ GPU-native HNSW (~12× build, ~4.7× search)</td></tr>
@@ -496,9 +497,9 @@
       <ul>
         <li><b>NV-Ingest</b> (page-element / table / graphic detectors + <b>PaddleOCR</b>)</li>
         <li>optional <b>NeMo Curator</b> prep (dedup / quality / PII)</li>
-        <li><b>Embedding NIM</b> <code>llama-3.2-nv-embedqa-1b-v2</code></li>
+        <li><b>Embedding NIM</b> <code>llama-nemotron-embed-1b-v2</code></li>
         <li><b>Vector DB</b> — Milvus (+ <b>cuVS</b>) or Elasticsearch</li>
-        <li>hybrid retrieval → <b>Reranking NIM</b> <code>llama-3.2-nv-rerankqa-1b-v2</code></li>
+        <li>hybrid retrieval → <b>Reranking NIM</b> <code>llama-nemotron-rerank-1b-v2</code></li>
         <li><b>NIM LLM</b> generation (grounded + cited)</li>
       </ul>
       <p style="margin-top:8px">The embed+rerank pair is tuned together for high BEIR/TechQA accuracy, multilingual + cross-lingual.</p></div>
@@ -520,13 +521,13 @@
     <div class="card cyan"><h4><span class="icon">🔌</span>Embedding vs ranking endpoints</h4>
       <pre class="code-block"><code># Embedding NIM — asymmetric input_type
 POST {base}/v1/embeddings
-{ "model": "nvidia/llama-3.2-nv-embedqa-1b-v2",
+{ "model": "nvidia/llama-nemotron-embed-1b-v2",   # renamed in NIM 1.13.0
   "input": ["...chunk..."],
   "input_type": "passage" }   # "query" at search time
 
 # Reranking NIM — DIFFERENT route + payload
 POST {base}/v1/ranking
-{ "model": "nvidia/llama-3.2-nv-rerankqa-1b-v2",
+{ "model": "nvidia/llama-nemotron-rerank-1b-v2",  # was llama-3.2-nv-rerankqa-1b-v2
   "query":    {"text": "warranty for model X?"},
   "passages": [{"text":"..."},{"text":"..."}] }
 # -> {"rankings":[{"index":2,"logit":8.1}, ...]}</code></pre>
@@ -535,7 +536,7 @@ POST {base}/v1/ranking
       <pre class="code-block"><code>embedders:
   nim_embedder:
     _type: nim
-    model_name: nvidia/llama-nemotron-embed-1b-v2  # renamed in 1.7
+    model_name: nvidia/llama-nemotron-embed-1b-v2  # NIM-1.13.0 name
 
 retrievers:
   kb_retriever:
@@ -592,7 +593,7 @@ retrievers:
 <section id="traps">
   <div class="kicker">Section 5 · Gotchas</div>
   <h2>Exam traps &amp; gotchas</h2>
-  <p class="lede">The fifteen traps this domain plants. Most are symptom→stage mapping or "X is obsolete / X everywhere" overreach.</p>
+  <p class="lede">The eighteen traps this domain plants. Most are symptom→stage mapping or "X is obsolete / X everywhere" overreach.</p>
   <div class="trap-grid">
     <div class="trap"><h4><span class="n">01</span>"Bigger chunks = better"</h4><p>Oversized chunks <b>dilute the embedding</b> (many topics → mushy vector) and stuff noise into the prompt. <span class="fix">Chunk size is a retrieval parameter tuned by recall/precision.</span></p></div>
     <div class="trap"><h4><span class="n">02</span>Overlap fixes quality</h4><p>Overlap prevents an answer span from being split across chunks; it does <b>not</b> fix bad sizing and inflates index size/cost. <span class="fix">Different tool for a different job.</span></p></div>
@@ -625,7 +626,7 @@ retrievers:
     <div class="answer"><b>Hybrid search: add a sparse/BM25 channel and fuse with RRF.</b><span class="why">Exact identifiers are lexical signals dense embeddings can't represent; a bigger embedder won't fix it.</span></div></details>
 
   <details class="drill"><summary><span class="qn">D2</span><span>Recall@50 is 0.92 but answers are mediocre; the right chunk is usually around rank 20–40, and the LLM receives 50 chunks. Cheapest fix?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
-    <div class="answer"><b>Add the reranking NIM</b> (cross-encoder, e.g. <code>llama-3.2-nv-rerankqa-1b-v2</code>) over the 50 candidates, keep top-5.<span class="why">The precision-stage textbook case — improves accuracy <i>and</i> cuts prompt tokens.</span></div></details>
+    <div class="answer"><b>Add the reranking NIM</b> (cross-encoder, e.g. <code>llama-nemotron-rerank-1b-v2</code>, formerly <code>llama-3.2-nv-rerankqa-1b-v2</code>) over the 50 candidates, keep top-5.<span class="why">The precision-stage textbook case — improves accuracy <i>and</i> cuts prompt tokens.</span></div></details>
 
   <details class="drill"><summary><span class="qn">D3</span><span>A financial-analyst agent must answer "How did supplier risks discussed in the 2023 10-K evolve through the 2025 filings?" spanning entities and relationships across many documents. Vector RAG keeps returning isolated, similar-sounding paragraphs. Architecture change?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
     <div class="answer"><b>GraphRAG / knowledge-graph retrieval</b>: extract entities/relations at indexing, use local (entity-expansion) search for the multi-hop chain.<span class="why">LazyGraphRAG-style deferred indexing if cost is a concern.</span></div></details>
@@ -636,7 +637,7 @@ retrievers:
   <details class="drill"><summary><span class="qn">D5</span><span>Compliance flags that customer SSNs appear in retrieved contexts shown to agents. The team proposes a prompt instructing the LLM to omit PII. Correct response?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
     <div class="answer">Reject prompt-level mitigation as primary control; <b>redact PII at ingestion</b> (NeMo Curator <code>PiiModifier</code>/Presidio) and re-index the affected collection, enforce scope via <b>metadata filters</b>, keep Guardrails-style output checks as a secondary layer.<span class="why">Once PII is embedded and stored, every retrieval can leak it.</span></div></details>
 
-  <details class="drill"><summary><span class="qn">D6</span><span>You upgrade from <code>nv-embedqa-e5-v5</code> to <code>llama-3.2-nv-embedqa-1b-v2</code> and only embed <i>new</i> documents with the new model into the same collection. Retrieval quality craters. Why?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+  <details class="drill"><summary><span class="qn">D6</span><span>You upgrade from <code>nv-embedqa-e5-v5</code> to <code>llama-nemotron-embed-1b-v2</code> and only embed <i>new</i> documents with the new model into the same collection. Retrieval quality craters. Why?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
     <div class="answer"><b>Mixed embedding spaces</b>: vectors from different models aren't comparable, so nearest-neighbor results are meaningless across the boundary.<span class="why">Re-embed the entire corpus with the new model into a fresh (versioned) index, then cut over.</span></div></details>
 
   <details class="drill"><summary><span class="qn">D7</span><span>Docs change daily; nightly full re-embedding of 10M chunks is blowing the GPU budget. Better pattern?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
@@ -681,17 +682,17 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 chunks = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64).split_documents(docs)
-emb = NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2", truncate="END")
+emb = NVIDIAEmbeddings(model="nvidia/llama-nemotron-embed-1b-v2", truncate="END")  # was llama-3.2-nv-embedqa-1b-v2
 vstore = FAISS.from_documents(chunks, emb)                      # passages embedded as input_type=passage
 
 retriever = ContextualCompressionRetriever(                     # stage 2: cross-encoder precision
     base_retriever=vstore.as_retriever(search_kwargs={"k": 40}),  # stage 1: wide &amp; cheap
-    base_compressor=NVIDIARerank(model="nvidia/llama-3.2-nv-rerankqa-1b-v2", top_n=5),
+    base_compressor=NVIDIARerank(model="nvidia/llama-nemotron-rerank-1b-v2", top_n=5),  # was ...nv-rerankqa-1b-v2
 )
 llm = ChatNVIDIA(model="meta/llama-3.3-70b-instruct")
 ctx = retriever.invoke("What is the warranty period for model X?")  # query embedded as input_type=query
 answer = llm.invoke(f"Answer ONLY from context:\n{ctx}\n\nQ: What is the warranty period for model X?")</code></pre>
-      <p><b>What to notice:</b> the whole §2 pipeline in ~12 lines — retrieve wide (k=40) then rerank down to 5 is the two-stage mantra, and <code>NVIDIAEmbeddings</code>/<code>NVIDIARerank</code> are just OpenAI-compatible NIM endpoints behind LangChain classes. The embed/rerank model pair (<code>...nv-embedqa-1b-v2</code> + <code>...nv-rerankqa-1b-v2</code>) is NVIDIA's matched multilingual duo.</p>
+      <p><b>What to notice:</b> the whole §2 pipeline in ~12 lines — retrieve wide (k=40) then rerank down to 5 is the two-stage mantra, and <code>NVIDIAEmbeddings</code>/<code>NVIDIARerank</code> are just OpenAI-compatible NIM endpoints behind LangChain classes. The embed/rerank model pair (<code>llama-nemotron-embed-1b-v2</code> + <code>llama-nemotron-rerank-1b-v2</code>, formerly the <code>llama-3.2-nv-embedqa/rerankqa-1b-v2</code> names) is NVIDIA's matched multilingual duo.</p>
     </div>
 
     <div class="card cyan">
@@ -703,7 +704,7 @@ from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 recursive = RecursiveCharacterTextSplitter(            # tries \n\n, \n, ". ", " " in order
     chunk_size=512, chunk_overlap=64).split_text(long_text)
 semantic = SemanticChunker(                            # splits where adjacent-sentence similarity drops
-    NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2"),
+    NVIDIAEmbeddings(model="nvidia/llama-nemotron-embed-1b-v2"),
     breakpoint_threshold_type="percentile").split_text(long_text)
 print(len(recursive), len(semantic))                   # semantic: variable sizes, topical coherence — and embedding cost at ingest</code></pre>
       <p><b>What to notice:</b> recursive enforces a size budget while respecting separator hierarchy (the production default); semantic spends embedding calls <i>during ingestion</i> to find topic boundaries and emits variable-size chunks. Benchmarks disagree on which wins — the exam-safe answer is "measure on your corpus" (§3.2).</p>
@@ -765,7 +766,7 @@ def sync_doc(doc_id: str, text: str, client, emb):
         return "unchanged"                                        # skip: no re-embedding cost
     client.delete("docs", filter=f'doc_id == "{doc_id}"')          # targeted delete of stale chunks
     rows = [{"id": f"{doc_id}#{i}", "doc_id": doc_id, "content_hash": h,
-             "text": c, "dense_vector": v, "embedding_model": "llama-3.2-nv-embedqa-1b-v2"}
+             "text": c, "dense_vector": v, "embedding_model": "llama-nemotron-embed-1b-v2"}
             for i, (c, v) in enumerate(zip(chunk(text), emb.embed_documents(chunk(text))))]
     client.insert("docs", rows)
     return "reindexed"
@@ -823,7 +824,7 @@ curate = Sequential([
     PiiModifier(entities=["PERSON", "EMAIL", "US_SSN"]),    # Presidio-backed PII redaction, pre-index
 ])
 clean_docs = curate(raw_docs)                               # deduped, filtered, redacted
-# only NOW: chunk -> embed (llama-3.2-nv-embedqa-1b-v2) -> upsert to Milvus</code></pre>
+# only NOW: chunk -> embed (llama-nemotron-embed-1b-v2) -> upsert to Milvus</code></pre>
       <p><b>What to notice:</b> this is the stage <i>between</i> raw extraction and chunking — and it's <b>NeMo Curator</b>, not Retriever (trap #16). Fuzzy dedup is <b>MinHash + LSH</b>; all GPU-accelerated for ~10–100× CPU throughput. PII redaction here is the load-bearing control (trap #12); skipping dedup is what returns the same passage 5× (drill D8). Class names illustrative — verify against the current Curator API.</p>
     </div>
   </div>
@@ -879,7 +880,7 @@ clean_docs = curate(raw_docs)                               # deduped, filtered,
 <footer id="sources">
   <h3>Sources</h3>
   <ul>
-    <li>NeMo Retriever overview &amp; models — <a href="https://docs.nvidia.com/nim/#nemo-retriever" target="_blank" rel="noopener">docs.nvidia.com/nim — NeMo Retriever</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard" target="_blank" rel="noopener">embedqa-1b-v2 card</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard" target="_blank" rel="noopener">rerankqa-1b-v2 card</a></li>
+    <li>NeMo Retriever overview &amp; models (NIM 1.13.0 Nemotron rename) — <a href="https://docs.nvidia.com/nim/#nemo-retriever" target="_blank" rel="noopener">docs.nvidia.com/nim — NeMo Retriever</a> · <a href="https://docs.nvidia.com/nim/nemo-retriever/text-embedding/1.13.0/release-notes.html" target="_blank" rel="noopener">1.13.0 release notes (rename)</a> · <a href="https://huggingface.co/nvidia/llama-nemotron-embed-1b-v2" target="_blank" rel="noopener">llama-nemotron-embed-1b-v2</a> · <a href="https://huggingface.co/nvidia/llama-nemotron-rerank-1b-v2" target="_blank" rel="noopener">llama-nemotron-rerank-1b-v2</a></li>
     <li>NV-Ingest / NeMo Retriever extraction (PaddleOCR + detector NIMs) — <a href="https://github.com/NVIDIA/nv-ingest" target="_blank" rel="noopener">github.com/NVIDIA/nv-ingest</a> · <a href="https://docs.nvidia.com/nemo/retriever/latest/extraction/overview/" target="_blank" rel="noopener">extraction overview</a></li>
     <li>NVIDIA RAG &amp; AI-Q Research Assistant Blueprints — <a href="https://github.com/NVIDIA-AI-Blueprints/rag" target="_blank" rel="noopener">github — RAG blueprint</a> · <a href="https://github.com/NVIDIA-AI-Blueprints/aiq-research-assistant" target="_blank" rel="noopener">github — AI-Q research assistant</a> · <a href="https://build.nvidia.com/nvidia/aiq" target="_blank" rel="noopener">build.nvidia.com/nvidia/aiq</a></li>
     <li>Milvus GPU indexes &amp; cuVS (CAGRA / GPU_IVF_*) — <a href="https://milvus.io/docs/gpu_index.md" target="_blank" rel="noopener">Milvus GPU index</a> · <a href="https://milvus.io/docs/gpu-cagra.md" target="_blank" rel="noopener">GPU_CAGRA</a> · <a href="https://zilliz.com/blog/milvus-on-gpu-with-nvidia-rapids-cuvs" target="_blank" rel="noopener">Milvus on GPU w/ RAPIDS cuVS</a></li>
@@ -1082,7 +1083,7 @@ portalLabel.position.set(PORTAL_X, 7.6, 0);
 scene.add(portalLabel);
 const portalHit = new THREE.Mesh(new THREE.BoxGeometry(6.4, 6.4, 1.5), new THREE.MeshBasicMaterial({ visible: false }));
 portalHit.position.copy(portalRing.position);
-portalHit.userData = { title: 'Embedding NIM (bi-encoder)', desc: 'Each chunk tile becomes a dense vector — llama-3.2-nv-embedqa-1b-v2, passages embedded with input_type="passage". Using the same mode for queries silently degrades retrieval (trap #5).' };
+portalHit.userData = { title: 'Embedding NIM (bi-encoder)', desc: 'Each chunk tile becomes a dense vector — llama-nemotron-embed-1b-v2 (renamed in NIM 1.13.0 from llama-3.2-nv-embedqa-1b-v2), passages embedded with input_type="passage". Using the same mode for queries silently degrades retrieval (trap #5).' };
 scene.add(portalHit); hoverables.push(portalHit);
 
 // ---------- ④ vector-space cloud ----------
@@ -1155,7 +1156,7 @@ gateLabel.position.set(GATE_X, 9.4, 0);
 scene.add(gateLabel);
 const gateHit = new THREE.Mesh(new THREE.BoxGeometry(2, 8, 7.5), new THREE.MeshBasicMaterial({ visible: false }));
 gateHit.position.set(GATE_X, 3.5, 0);
-gateHit.userData = { title: 'Reranker (cross-encoder)', desc: 'Scores query+passage pairs jointly — far more accurate than bi-encoder cosine, but per-pair so only over the shortlist. Most candidates dim out; the best few brighten and dock into generation. llama-3.2-nv-rerankqa-1b-v2.' };
+gateHit.userData = { title: 'Reranker (cross-encoder)', desc: 'Scores query+passage pairs jointly — far more accurate than bi-encoder cosine, but per-pair so only over the shortlist. Most candidates dim out; the best few brighten and dock into generation. llama-nemotron-rerank-1b-v2 (renamed in NIM 1.13.0 from llama-3.2-nv-rerankqa-1b-v2).' };
 scene.add(gateHit); hoverables.push(gateHit);
 
 // ---------- ⑥ generation core ----------

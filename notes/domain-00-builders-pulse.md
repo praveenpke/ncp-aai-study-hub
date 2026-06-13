@@ -125,7 +125,7 @@ Claude Code's design (a simple while-loop + tools + filesystem) became the refer
 - **Sub-agents** (spawned for deep exploration, returning summaries — context quarantine)
 - **A detailed system prompt** (Claude Code's prompt is famously long and example-dense)
 
-The [deepagents library](https://github.com/langchain-ai/deepagents) ships this as a batteries-included harness on the LangGraph runtime — pitched as Claude Code's architecture decoupled from Claude, usable with any tool-calling model.
+The [deepagents library](https://github.com/langchain-ai/deepagents) ships this as a batteries-included harness on the LangGraph runtime — pitched as Claude Code's architecture decoupled from Claude, usable with any tool-calling model. (As of LangChain/LangGraph **1.x** in 2026, the stack layers cleanly: LangGraph = the graph runtime, `langchain.agents.create_agent` = the minimal agent harness on top of it — this **superseded** the now-deprecated `create_react_agent` from `langgraph.prebuilt` — and deepagents = the opinionated harness on top of `create_agent` with filesystem, sub-agents, and middleware bundled in.)
 
 **Shallow vs deep, at a glance:**
 
@@ -146,8 +146,9 @@ The [deepagents library](https://github.com/langchain-ai/deepagents) ships this 
 - Anthropic launched **MCP** (Nov 2024) as the "USB-C for AI tools" — one open protocol replacing N×M custom integrations between models and data sources.
 - OpenAI adopted it in March 2025 (Agents SDK, Responses API, ChatGPT desktop); Google/Gemini, Microsoft Copilot, Cursor, and VS Code followed — rare full-industry convergence on a competitor's standard.
 - The official registry hit ~2,000 entries by Nov 2025 — 407% growth from its September launch batch ([one-year retrospective](https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/)) — with 10,000+ active public servers in the wild.
-- Dec 2025: [Anthropic donated MCP to the Agentic AI Foundation](https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation) under the Linux Foundation, with OpenAI and Block as co-founders.
+- Dec 9, 2025: both major protocols landed under one roof — the Linux Foundation announced the **Agentic AI Foundation (AAIF)**, anchored by three contributed projects: [Anthropic's MCP, Block's goose, and OpenAI's AGENTS.md](https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation). Platinum backers include AWS, Anthropic, Block, Bloomberg, Cloudflare, Google, Microsoft, and OpenAI. MCP is now **vendor-neutral / community-governed**, not "Anthropic's protocol."
 - Google's **A2A (Agent2Agent)** protocol launched April 2025 with 50+ partners and was [donated to the Linux Foundation in June 2025](https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents); it [passed 150 member organizations within a year](https://www.linuxfoundation.org/press/a2a-protocol-surpasses-150-organizations-lands-in-major-cloud-platforms-and-sees-enterprise-production-use-in-first-year) (AWS, Microsoft, Salesforce, SAP, ServiceNow...).
+- **A2A v1.0 shipped early 2026** ([announcement](https://a2a-protocol.org/latest/announcing-1.0/); the spec crossed 150+ production orgs by April 2026) — the first production-grade release: **Signed Agent Cards** (cryptographic domain verification of an agent's identity), **multi-tenancy** (multiple agents behind one endpoint), and **version negotiation** (v0.3→v1.0 backward-compat). It is now governed under the AAIF and already iterating past 1.0.
 - Division of labor: **MCP = agent ↔ tools/data. A2A = agent ↔ agent** (JSON-RPC 2.0 + SSE transport, Agent Cards for capability discovery). Complementary, not competing.
 
 **The security counter-current.**
@@ -155,7 +156,9 @@ The [deepagents library](https://github.com/langchain-ai/deepagents) ships this 
 - **Tool poisoning** — malicious instructions hidden in tool descriptions, visible to the model but not normally shown to users — became its own attack class; benchmarks like MCPTox (45 real MCP servers, 353 tools) showed >70% attack success on some models.
 - The composability that makes MCP attractive is exactly what assembles the trifecta by accident: mix community servers and you've granted all three legs without noticing.
 
-**For your exam:** know MCP vs A2A roles cold. The mitigation for the trifecta is *removing one leg* — sandbox egress, allowlist tools, isolate untrusted content from privileged context. That's domain 09 (safety/compliance) plus approval gates on tool use (domain 10).
+**The codified version.** This discourse hardened into a standard: the [OWASP Top 10 for Agentic Applications (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/), released **Dec 9, 2025** by the OWASP GenAI Security Project (IDs **ASI01–ASI10**: agent goal hijacking, tool misuse, identity/privilege abuse, supply chain, unexpected code execution, memory poisoning, insecure inter-agent comms, cascading failures, human-agent trust exploitation, rogue agents). It sits *alongside* the established OWASP Top 10 for LLM Applications 2025 (`LLM01:2025`…), which still has prompt injection at LLM01. A current agentic guide should cite **both** lists.
+
+**For your exam:** know MCP vs A2A roles cold. The mitigation for the trifecta is *removing one leg* — sandbox egress, allowlist tools, isolate untrusted content from privileged context. That's domain 09 (safety/compliance) plus approval gates on tool use (domain 10). When a question references an "agent-specific" risk catalog, the answer is the **OWASP Agentic Apps Top 10 (ASI01–ASI10)**, not the LLM Top 10.
 
 ### 7. Multi-agent: skeptics vs advocates
 
@@ -179,7 +182,7 @@ Engineering lessons buried in the Anthropic post that practitioners quote consta
 
 **The sobering math practitioners repeat.**
 - **Errors compound**: 95% per-step accuracy over a 10-step task is ~60% task success (0.95^10). This single fact drives most harness design — checkpoints, validation gates, bounded retries, and the preference for shorter chains.
-- **Costs scale superlinearly with autonomy**: agents re-read their whole growing context every step, so cost grows roughly quadratically with trajectory length unless caching is engineered.
+- **Costs scale superlinearly with autonomy**: agents re-read their whole growing context every step, so cost grows roughly quadratically with trajectory length unless caching is engineered. (Why quadratic: step 1 reads 1 unit, step 2 reads 2, …, step N reads N; the sum 1+2+…+N ≈ N²/2. A 50-step trajectory costs ~25× a 10-step one for the same per-step work — which is exactly why prefix/KV-cache stability below is the lever that pulls it back toward linear.)
 - **Loop detection matters**: runaway agent conversations have produced five-figure surprise bills; budget caps and step limits are guardrails, not paranoia.
 
 **The flagship field report.** Manus's [Context Engineering for AI Agents: Lessons from Building Manus](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus) (Yichao "Peak" Ji, July 2025), written after four complete framework rebuilds:
@@ -222,7 +225,7 @@ Practical resolution circulating in the discourse:
 
 **What happened.** The trace-everything market matured and consolidated around a handful of platforms:
 - **LangSmith** — deepest LangChain/LangGraph integration: node-level state diffs, full execution graphs, trajectory replay against new model versions.
-- **Langfuse** — the open-source leader; MIT-licensed its formerly commercial modules (LLM-as-judge evals, annotation queues, playground) in June 2025, reached ~23M SDK installs/month (6M+ Docker pulls), and was acquired by ClickHouse in January 2026.
+- **Langfuse** — the open-source leader; MIT-licensed its formerly commercial modules (LLM-as-judge evals, annotation queues, playground) in June 2025, reached 26M+ SDK installs/month (6M+ Docker pulls), and was acquired by ClickHouse in January 2026 (alongside ClickHouse's $400M Series D).
 - **Arize Phoenix** — open-source, OpenTelemetry-native via the OpenInference conventions; strongest for notebook- and eval-heavy workflows.
 - **Braintrust** — closed-source, eval-first (regression harness as the center of gravity) with tracing attached.
 - Datadog and Honeycomb pulled LLM traces into general-purpose observability for teams that want infra correlation.
@@ -252,7 +255,7 @@ Use this as a revision index: when reviewing a domain file, skim the threads lis
 | 3 | 12-Factor Agents | all six | Own prompts, context, and control flow; agents are mostly software |
 | 4 | Evals movement + backlash | 03 | Error analysis first; binary judgments; rigor proportional to risk |
 | 5 | Deep agents | 07, architecture | Planning + filesystem + sub-agents + detailed prompt — converged on three times |
-| 6 | MCP + A2A | 09, 10 | MCP = agent↔tools, A2A = agent↔agents; break one leg of the lethal trifecta |
+| 6 | MCP + A2A | 09, 10 | MCP = agent↔tools, A2A = agent↔agents (both now under AAIF; A2A v1.0 = Signed Agent Cards); break one leg of the lethal trifecta — see OWASP Agentic Top 10 |
 | 7 | Multi-agent debate | 04, 08 | Parallel for wide/read-heavy, single for deep/write-heavy; context flow is the bottleneck |
 | 8 | War stories + SLMs | 04, 07, 08 | Errors compound; KV-cache hit rate; right-size the model |
 | 9 | Memory | 04, 08 | Episodic / semantic / procedural; in-context vs external store |
@@ -319,7 +322,10 @@ Use this as a revision index: when reviewing a domain file, skim the threads lis
 - [Linux Foundation launches the A2A project](https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents) — Google's donation, June 2025.
 - [A2A surpasses 150 organizations](https://www.linuxfoundation.org/press/a2a-protocol-surpasses-150-organizations-lands-in-major-cloud-platforms-and-sees-enterprise-production-use-in-first-year) — one-year adoption report.
 - [One Year of MCP](https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/) — registry growth, spec evolution, adoption stats.
+- [Agentic AI Foundation (AAIF) formation](https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation) — Linux Foundation, Dec 9, 2025: MCP + goose + AGENTS.md under one neutral body.
+- [Announcing A2A v1.0](https://a2a-protocol.org/latest/announcing-1.0/) — early 2026 production release: Signed Agent Cards, multi-tenancy, version negotiation.
 - [A2A Protocol site](https://a2a-protocol.org/latest/) — spec, Agent Cards, transport details.
+- [OWASP Top 10 for Agentic Applications (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/) — ASI01–ASI10; the agent-specific companion to the LLM Top 10 2025, released Dec 9, 2025.
 
 ### Memory papers
 - [MemGPT: Towards LLMs as Operating Systems](https://arxiv.org/abs/2310.08560) — OS-style memory tiers; became Letta.

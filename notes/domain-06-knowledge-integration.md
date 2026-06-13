@@ -13,7 +13,7 @@ flowchart LR
     A[Raw docs<br/>PDF, HTML, PPTX,<br/>tables, charts, scans] --> B[Extraction / parsing<br/>NV-Ingest: text, tables,<br/>charts, infographics + OCR]
     B --> B2[PII redaction<br/>NeMo Curator / Presidio]
     B2 --> C[Chunking<br/>fixed / recursive / semantic /<br/>structure-aware + overlap]
-    C --> D[Embedding NIM<br/>llama-3.2-nv-embedqa-1b-v2<br/>input_type: passage]
+    C --> D[Embedding NIM<br/>llama-nemotron-embed-1b-v2<br/>input_type: passage]
     D --> E[(Vector DB + ANN index<br/>Milvus / FAISS / pgvector<br/>HNSW, IVF + metadata)]
     Q[User query] --> QE[Embed query<br/>input_type: query] --> E
     Q --> S[Sparse / BM25] --> F
@@ -56,9 +56,9 @@ The stages are independently tunable and independently measurable — evaluate r
 
 **Embeddings:** a bi-encoder encodes query and passage *independently* into vectors; similarity (cosine/dot) ≈ relevance. Key properties: dimension (storage/speed vs quality; Matryoshka embeddings let you truncate dimensions for cheaper search), max input tokens (chunks must fit), domain/language coverage, and **asymmetry** — retrieval embedders like NVIDIA's are trained with distinct `input_type="query"` vs `input_type="passage"` modes. Using the same mode for both silently degrades retrieval (classic exam trap; LangChain's `embed_query` vs `embed_documents` handles it for you).
 
-**Distance metric:** match the index metric to how the embedder was trained. **Cosine** (angle, magnitude-invariant) is the safe default for text retrieval; **dot/inner product (IP)** is equivalent to cosine *when vectors are L2-normalized* and is what many embedders actually optimize; **L2/Euclidean** is rarely the right choice for normalized text embeddings. Mismatching the metric (e.g. querying an IP-trained model with L2) quietly tanks recall — the metric is a property of the model, not a free knob. (Milvus: `metric_type="COSINE"/"IP"/"L2"`; pgvector ops: `vector_cosine_ops` / `vector_ip_ops` / `vector_l2_ops`.)
+**Distance metric:** match the index metric to how the embedder was trained. **Cosine** (angle, magnitude-invariant) is the safe default for text retrieval; **dot/inner product (IP)** is equivalent to cosine *when vectors are L2-normalized* — normalizing forces every vector to length 1, so the only thing left to compare is *direction*, which is exactly what cosine measures — and IP is what many embedders actually optimize; **L2/Euclidean** is rarely the right choice for normalized text embeddings. Mismatching the metric quietly tanks recall — concretely, a model trained for cosine but indexed with raw **L2** will rank a long, generic chunk (large vector magnitude) above a short, on-topic one, because Euclidean distance is fooled by vector length while cosine ignores it. The metric is a property of the model, not a free knob. (Milvus: `metric_type="COSINE"/"IP"/"L2"`; pgvector ops: `vector_cosine_ops` / `vector_ip_ops` / `vector_l2_ops`.)
 
-**NeMo Retriever text embedding NIMs:** `llama-3.2-nv-embedqa-1b-v2` (current flagship: multilingual, 26 languages, **8192-token max input**, Matryoshka-configurable to 384/512/768/1024/2048 dims), `nv-embedqa-e5-v5` (English QA), `nv-embedqa-mistral-7b-v2` (multilingual). All served as NIM containers with an OpenAI-compatible `/v1/embeddings` API.
+**NeMo Retriever text embedding NIMs:** `llama-nemotron-embed-1b-v2` (current flagship — **renamed in NeMo Retriever NIM 1.13.0** from `llama-3.2-nv-embedqa-1b-v2`, which exam materials may still use; multilingual, 26 languages, **8192-token max input**, Matryoshka-configurable to 384/512/768/1024/2048 dims), plus the 300M variant `llama-nemotron-embed-300m-v2` (was `llama-3.2-nemoretriever-300m-embed-v2`) and a vision-language `llama-nemotron-embed-vl-1b-v2`; older `nv-embedqa-e5-v5` (English QA) and `nv-embedqa-mistral-7b-v2` (multilingual) remain. All served as NIM containers with an OpenAI-compatible `/v1/embeddings` API. **2026 branding note:** NVIDIA now markets this embed/rerank/extract collection as **"Nemotron RAG"** (the Hugging Face collection label), while **NeMo Retriever** stays the platform name (NeMo Retriever Library + Nemotron Retriever open models + NIM microservices) — same family, recognize the label.
 
 **Vector stores:**
 
@@ -96,7 +96,7 @@ RRF only uses *ranks*, never raw scores — so it needs no score normalization a
 
 ### 3.5 Reranking: cross-encoders for precision
 
-A **cross-encoder** feeds the query and a candidate passage through the model *together*, letting attention compare them token-by-token — far more accurate relevance than bi-encoder cosine similarity, but it must run per query-passage pair at query time, so it can never scan the whole corpus. Hence the two-stage pattern: **retrieve wide (top 40-100, cheap ANN) → rerank → keep top 3-5**. Effects: higher answer accuracy *and* lower generation cost (fewer, better chunks → fewer prompt tokens), plus it's the natural merge point when retrieving from multiple sources. NVIDIA's reranking NIM: `llama-3.2-nv-rerankqa-1b-v2` (multilingual companion to the embedding NIM; predecessor `nv-rerankqa-mistral-4b-v3` — a truncated, LoRA-tuned Mistral with a binary relevance head). Latency is the price: budget reranking only over the shortlist.
+A **cross-encoder** feeds the query and a candidate passage through the model *together*, letting attention compare them token-by-token — far more accurate relevance than bi-encoder cosine similarity, but it must run per query-passage pair at query time, so it can never scan the whole corpus. Hence the two-stage pattern: **retrieve wide (top 40-100, cheap ANN) → rerank → keep top 3-5**. Effects: higher answer accuracy *and* lower generation cost (fewer, better chunks → fewer prompt tokens), plus it's the natural merge point when retrieving from multiple sources. NVIDIA's reranking NIM: `llama-nemotron-rerank-1b-v2` (current — **renamed in NeMo Retriever NIM 1.13.0** from `llama-3.2-nv-rerankqa-1b-v2`, plus a VL variant `llama-nemotron-rerank-vl-1b-v2`; multilingual companion to the embedding NIM; predecessor `nv-rerankqa-mistral-4b-v3` — a truncated, LoRA-tuned Mistral with a binary relevance head). Latency is the price: budget reranking only over the shortlist.
 
 ### 3.6 Data handling: parsing, PII, freshness
 
@@ -133,8 +133,8 @@ Decision: **vector RAG for "find the passage"; GraphRAG/KG for "connect the fact
 
 | NVIDIA tool | Role in this domain | Key facts |
 |---|---|---|
-| **NeMo Retriever embedding NIMs** | The embedding stage as a container with an OpenAI-compatible API | **`llama-3.2-nv-embedqa-1b-v2`** — multilingual (26 languages), 8192-token max input, Matryoshka dims 384–2048, asymmetric `input_type` query/passage; also `nv-embedqa-e5-v5` (English), `nv-embedqa-mistral-7b-v2` (multilingual). In LangChain: `NVIDIAEmbeddings` from `langchain-nvidia-ai-endpoints` |
-| **NeMo Retriever reranking NIM** | The precision stage: cross-encoder reranking as a service | **`llama-3.2-nv-rerankqa-1b-v2`** (current), `nv-rerankqa-mistral-4b-v3` (prior gen). In LangChain: `NVIDIARerank` (`compress_documents`), wraps as a `ContextualCompressionRetriever` |
+| **NeMo Retriever embedding NIMs** | The embedding stage as a container with an OpenAI-compatible API | **`llama-nemotron-embed-1b-v2`** (renamed in NIM 1.13.0 from `llama-3.2-nv-embedqa-1b-v2`) — multilingual (26 languages), 8192-token max input, Matryoshka dims 384–2048, asymmetric `input_type` query/passage; also `llama-nemotron-embed-300m-v2`, vision-language `llama-nemotron-embed-vl-1b-v2`, older `nv-embedqa-e5-v5` (English) / `nv-embedqa-mistral-7b-v2` (multilingual). In LangChain: `NVIDIAEmbeddings` from `langchain-nvidia-ai-endpoints` |
+| **NeMo Retriever reranking NIM** | The precision stage: cross-encoder reranking as a service | **`llama-nemotron-rerank-1b-v2`** (current — renamed in NIM 1.13.0 from `llama-3.2-nv-rerankqa-1b-v2`; VL variant `llama-nemotron-rerank-vl-1b-v2`), `nv-rerankqa-mistral-4b-v3` (prior gen). In LangChain: `NVIDIARerank` (`compress_documents`), wraps as a `ContextualCompressionRetriever` |
 | **NV-Ingest / NeMo Retriever extraction** | Ingestion stage: scalable multimodal document extraction | Fluent Python `Ingestor` pipeline: `.files().extract(extract_text/tables/charts/infographics).embed().vdb_upload().ingest()`; named NIMs: `nemoretriever-page-elements-v2`, `nemoretriever-table-structure-v1`, `nemoretriever-graphic-elements-v1`, **PaddleOCR** (OCR); outputs uniform metadata schema; newest releases ship as the `nemo-retriever` library (`create_ingestor`) — same chain |
 | **PaddleOCR** | The OCR text-recognition engine inside NV-Ingest / the Blueprints | Extracts characters from scanned pages & images (Apache-2.0); pairs with the page-element/table/graphic detector NIMs that handle layout. The exam's named "document-processing OCR" component |
 | **Milvus (+ cuVS / GPU CAGRA)** | NVIDIA's default vector DB in RAG blueprints | Dense + sparse(BM25) + `hybrid_search` with `RRFRanker`/`WeightedRanker`; metadata filter expressions; GPU indexes via **cuVS** (`GPU_CAGRA`/`GPU_IVF_FLAT`/`GPU_IVF_PQ`/`GPU_BRUTE_FORCE`); CAGRA ≈ GPU-native HNSW, ~12× faster build / ~4.7× faster search, throughput-oriented |
@@ -150,7 +150,7 @@ Decision: **vector RAG for "find the passage"; GraphRAG/KG for "connect the fact
 
 The exam expects you to recognize **NVIDIA's reference RAG stack as a layered Blueprint**, and to distinguish the two tiers:
 
-- **NVIDIA RAG Blueprint (foundation):** the production-ready retrieve→rerank→generate pipeline. Components by stage: **NV-Ingest** (multimodal extraction: page-element / table-structure / graphic-element detectors + **PaddleOCR**) → optional **NeMo Curator** prep → **NeMo Retriever embedding NIM** (`llama-3.2-nv-embedqa-1b-v2`) → **vector DB** (Milvus with **cuVS** GPU acceleration, or Elasticsearch) → hybrid retrieval → **NeMo Retriever reranking NIM** (`llama-3.2-nv-rerankqa-1b-v2`) → **NIM LLM** for generation. The embed+rerank pair is tuned together for high BEIR/TechQA accuracy with multilingual + cross-lingual support.
+- **NVIDIA RAG Blueprint (foundation):** the production-ready retrieve→rerank→generate pipeline. Components by stage: **NV-Ingest** (multimodal extraction: page-element / table-structure / graphic-element detectors + **PaddleOCR**) → optional **NeMo Curator** prep → **NeMo Retriever embedding NIM** (`llama-nemotron-embed-1b-v2`) → **vector DB** (Milvus with **cuVS** GPU acceleration, or Elasticsearch) → hybrid retrieval → **NeMo Retriever reranking NIM** (`llama-nemotron-rerank-1b-v2`) → **NIM LLM** for generation. The embed+rerank pair is tuned together for high BEIR/TechQA accuracy with multilingual + cross-lingual support.
 - **AI-Q Research Assistant Blueprint (agentic layer on top):** *extends* the RAG Blueprint into a deep-research agent. Orchestrated by **NeMo Agent Toolkit (NAT)**, it: (1) drafts a **report plan**, (2) **searches** both the internal RAG corpus and the **web (Tavily)**, (3) **writes** a draft, (4) **reflects on gaps** and issues follow-up queries, (5) **finalizes** with a source list. This is the canonical "agentic RAG / retrieval-in-the-reasoning-loop" reference for the exam.
 
 > **Version-dependent (don't memorize the exact SKUs):** the Blueprints' *generation* LLMs and embedding SKUs are refreshed frequently (the course-era lineup cites Llama 3.3 Nemotron Super 49B / Llama 3.3 70B for generation, Llama 3.2 NV EmbedQA 1B + RerankQA 1B for retrieval, on a ~2×H100 80GB self-hosted footprint; current builds have moved to Nemotron-3 / Nemotron embed-VL models and default to API-Catalog hosting with *no local GPU requirement*). **Memorize the architecture and component *roles*, not the model version string** — and always verify hardware on the specific Blueprint page, since requirements vary widely across Blueprints.
@@ -160,20 +160,20 @@ The exam expects you to recognize **NVIDIA's reference RAG stack as a layered Bl
 ```python
 # Embedding NIM — note the asymmetric input_type (passage at index, query at search)
 POST {base_url}/v1/embeddings
-{ "model": "nvidia/llama-3.2-nv-embedqa-1b-v2",
+{ "model": "nvidia/llama-nemotron-embed-1b-v2",   # renamed in NIM 1.13.0 (was llama-3.2-nv-embedqa-1b-v2)
   "input": ["...chunk text..."],
   "input_type": "passage",          # use "query" when embedding a search query
   "encoding_format": "float" }      # -> {"data":[{"embedding":[...]}]}
 
 # Reranking NIM — a DIFFERENT route and payload than embeddings
 POST {base_url}/v1/ranking
-{ "model": "nvidia/llama-3.2-nv-rerankqa-1b-v2",
+{ "model": "nvidia/llama-nemotron-rerank-1b-v2",  # renamed in NIM 1.13.0 (was llama-3.2-nv-rerankqa-1b-v2)
   "query":    {"text": "warranty period for model X?"},
   "passages": [ {"text": "..."}, {"text": "..."} ] }
 # -> {"rankings":[{"index": 2, "logit": 8.1}, ...]}  # sort by logit desc, keep top_n
 ```
 
-The exam-relevant details: reranking lives at **`/v1/ranking`** (not `/v1/embeddings`), takes a `query` + a list of `passages`, and returns `rankings` scored by **`logit`** (sort descending, keep the top-N). And the embedding endpoint's **`input_type`** is the asymmetry knob (trap #5) — `"passage"` for documents, `"query"` for queries.
+The exam-relevant details: reranking lives at **`/v1/ranking`** (not `/v1/embeddings`), takes a `query` + a list of `passages`, and returns `rankings` scored by **`logit`** (sort descending, keep the top-N). And the embedding endpoint's **`input_type`** is the asymmetry knob (trap #5) — `"passage"` for documents, `"query"` for queries. (Model strings shown are the post-1.13.0 Nemotron names; the older `llama-3.2-nv-*` strings still appear in pre-2026 course material and may show up on the exam — recognize both.)
 
 **NAT retriever/embedder config (NeMo Agent Toolkit v1.7).** In NAT you declare a named **`embedder`** in the top-level `embedders:` block, then a named **`retriever`** in the `retrievers:` block that references that embedder by name (`embedding_model`) and points at the vector store. Components use the `_type:` discriminator; the vector-store choice *is* the retriever `_type` (`milvus_retriever` or `nemo_retriever`). `top_k` sets the wide first-stage candidate count (the `nemo_retriever` NIM provider caps it at `gt 0, le 50`; `milvus_retriever` has no documented cap):
 
@@ -182,7 +182,7 @@ The exam-relevant details: reranking lives at **`/v1/ranking`** (not `/v1/embedd
 embedders:
   nim_embedder:
     _type: nim
-    model_name: nvidia/llama-nemotron-embed-1b-v2   # renamed in 1.7 (was llama-3.2-nv-embedqa-1b-v2)
+    model_name: nvidia/llama-nemotron-embed-1b-v2   # NIM-1.13.0 name (was llama-3.2-nv-embedqa-1b-v2)
     base_url: ${NIM_URL}
 
 retrievers:
@@ -258,7 +258,7 @@ Reranking is **not** a field of the NAT retriever config — wire the rerank/pre
    → **Hybrid search: add a sparse/BM25 channel and fuse with RRF.** Exact identifiers are lexical signals dense embeddings can't represent; a bigger embedder won't fix it.
 
 2. **Recall@50 is 0.92 but answers are mediocre; the right chunk is usually around rank 20-40, and the LLM receives 50 chunks. Cheapest fix?**
-   → **Add the reranking NIM** (cross-encoder, e.g., `llama-3.2-nv-rerankqa-1b-v2`) over the 50 candidates, keep top-5. This is the precision-stage textbook case — improves accuracy *and* cuts prompt tokens.
+   → **Add the reranking NIM** (cross-encoder, e.g., `llama-nemotron-rerank-1b-v2`, formerly `llama-3.2-nv-rerankqa-1b-v2`) over the 50 candidates, keep top-5. This is the precision-stage textbook case — improves accuracy *and* cuts prompt tokens.
 
 3. **A financial-analyst agent must answer "How did supplier risks discussed in the 2023 10-K evolve through the 2025 filings?" spanning entities and relationships across many documents. Vector RAG keeps returning isolated, similar-sounding paragraphs. Architecture change?**
    → **GraphRAG / knowledge-graph retrieval**: extract entities/relations at indexing, use local (entity-expansion) search for the multi-hop chain — with LazyGraphRAG-style deferred indexing if cost is a concern.
@@ -269,7 +269,7 @@ Reranking is **not** a field of the NAT retriever config — wire the rerank/pre
 5. **Compliance flags that customer SSNs appear in retrieved contexts shown to agents. The team proposes a prompt instructing the LLM to omit PII. Correct response?**
    → Reject prompt-level mitigation as primary control; **redact PII at ingestion** (NeMo Curator `PiiModifier`/Presidio) and re-index the affected collection, enforce scope via **metadata filters**, keep Guardrails-style output checks as a secondary layer.
 
-6. **You upgrade from `nv-embedqa-e5-v5` to `llama-3.2-nv-embedqa-1b-v2` and only embed *new* documents with the new model into the same collection. Retrieval quality craters. Why?**
+6. **You upgrade from `nv-embedqa-e5-v5` to `llama-nemotron-embed-1b-v2` and only embed *new* documents with the new model into the same collection. Retrieval quality craters. Why?**
    → **Mixed embedding spaces**: vectors from different models aren't comparable, so nearest-neighbor results are meaningless across the boundary. Re-embed the entire corpus with the new model into a fresh (versioned) index, then cut over.
 
 7. **Docs change daily; nightly full re-embedding of 10M chunks is blowing the GPU budget. Better pattern?**
@@ -289,12 +289,12 @@ Reranking is **not** a field of the NAT retriever config — wire the rerank/pre
 - **Measure retrieval before you architect.** Build the BEIR-style query→relevant-chunk eval set first (even 50 queries), get baseline recall@k/NDCG, *then* decide between chunking tweaks, hybrid, reranking, or GraphRAG. Teams routinely add expensive components to fix problems the metrics would have localized in an afternoon — and the fix order is almost always: extraction → chunking → hybrid → reranker → exotic.
 - **Treat extraction as the highest-leverage stage.** If tables, charts, and scanned pages dominate your corpus, NV-Ingest-grade extraction will beat any amount of downstream tuning; you cannot retrieve what was destroyed at parse time. Spot-check extracted chunks by eye early.
 - **Design the index schema for operations on day one:** stable chunk IDs (`doc_id#n`), `source`, `last_modified`, content hash, ACL/tenant tags, and `embedding_model_version` as metadata. Upserts, deletes, freshness syncs, tenancy filters, and model migrations all hang off these fields and none can be retrofitted cheaply.
-- **Default stack that covers 90% of cases:** recursive 512-token chunks (15% overlap) → `llama-3.2-nv-embedqa-1b-v2` → Milvus HNSW + metadata filters → hybrid with BM25 + RRF → `llama-3.2-nv-rerankqa-1b-v2` over top-40, keep top-5. Deviate only when your eval says so.
+- **Default stack that covers 90% of cases:** recursive 512-token chunks (15% overlap) → `llama-nemotron-embed-1b-v2` → Milvus HNSW + metadata filters → hybrid with BM25 + RRF → `llama-nemotron-rerank-1b-v2` over top-40, keep top-5. Deviate only when your eval says so.
 - **Budget freshness like a feature.** Decide the staleness SLA per source (minutes? days?), wire incremental upserts + a scheduled diff job, and alert on index-vs-source drift. The most common production RAG complaint isn't hallucination — it's confidently citing the superseded policy.
 
 ## 9. Sources
 
-- NeMo Retriever overview & models: https://docs.nvidia.com/nim/#nemo-retriever ; https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard ; https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard
+- NeMo Retriever overview & models (note the NIM 1.13.0 Nemotron rename): https://docs.nvidia.com/nim/#nemo-retriever ; https://docs.nvidia.com/nim/nemo-retriever/text-embedding/1.13.0/release-notes.html ; https://huggingface.co/nvidia/llama-nemotron-embed-1b-v2 ; https://huggingface.co/nvidia/llama-nemotron-rerank-1b-v2 (older slugs: build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard, .../llama-3_2-nv-rerankqa-1b-v2/modelcard)
 - NV-Ingest / NeMo Retriever extraction (incl. PaddleOCR + detector NIMs): https://github.com/NVIDIA/nv-ingest ; https://docs.nvidia.com/nemo/retriever/latest/extraction/overview/
 - NVIDIA RAG Blueprint & AI-Q Research Assistant Blueprint: https://github.com/NVIDIA-AI-Blueprints/rag ; https://github.com/NVIDIA-AI-Blueprints/aiq-research-assistant ; https://build.nvidia.com/nvidia/aiq
 - Milvus GPU indexes & cuVS (CAGRA / GPU_IVF_FLAT / GPU_IVF_PQ): https://milvus.io/docs/gpu_index.md ; https://milvus.io/docs/gpu-cagra.md ; https://zilliz.com/blog/milvus-on-gpu-with-nvidia-rapids-cuvs
@@ -322,19 +322,19 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 chunks = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64).split_documents(docs)
-emb = NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2", truncate="END")
+emb = NVIDIAEmbeddings(model="nvidia/llama-nemotron-embed-1b-v2", truncate="END")  # was llama-3.2-nv-embedqa-1b-v2
 vstore = FAISS.from_documents(chunks, emb)                      # passages embedded as input_type=passage
 
 retriever = ContextualCompressionRetriever(                     # stage 2: cross-encoder precision
     base_retriever=vstore.as_retriever(search_kwargs={"k": 40}),  # stage 1: wide & cheap
-    base_compressor=NVIDIARerank(model="nvidia/llama-3.2-nv-rerankqa-1b-v2", top_n=5),
+    base_compressor=NVIDIARerank(model="nvidia/llama-nemotron-rerank-1b-v2", top_n=5),  # was ...nv-rerankqa-1b-v2
 )
 llm = ChatNVIDIA(model="meta/llama-3.3-70b-instruct")
 ctx = retriever.invoke("What is the warranty period for model X?")  # query embedded as input_type=query
 answer = llm.invoke(f"Answer ONLY from context:\n{ctx}\n\nQ: What is the warranty period for model X?")
 ```
 
-*What to notice:* the whole §2 pipeline in ~12 lines — retrieve wide (k=40) then rerank down to 5 is the two-stage mantra, and `NVIDIAEmbeddings`/`NVIDIARerank` are just OpenAI-compatible NIM endpoints behind LangChain classes. The embed/rerank model pair (`...nv-embedqa-1b-v2` + `...nv-rerankqa-1b-v2`) is NVIDIA's matched multilingual duo.
+*What to notice:* the whole §2 pipeline in ~12 lines — retrieve wide (k=40) then rerank down to 5 is the two-stage mantra, and `NVIDIAEmbeddings`/`NVIDIARerank` are just OpenAI-compatible NIM endpoints behind LangChain classes. The embed/rerank model pair (`llama-nemotron-embed-1b-v2` + `llama-nemotron-rerank-1b-v2`, formerly the `llama-3.2-nv-embedqa/rerankqa-1b-v2` names) is NVIDIA's matched multilingual duo.
 
 **2) Chunking comparison: recursive vs semantic in a few lines**
 
@@ -346,7 +346,7 @@ from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 recursive = RecursiveCharacterTextSplitter(            # tries \n\n, \n, ". ", " " in order
     chunk_size=512, chunk_overlap=64).split_text(long_text)
 semantic = SemanticChunker(                            # splits where adjacent-sentence similarity drops
-    NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2"),
+    NVIDIAEmbeddings(model="nvidia/llama-nemotron-embed-1b-v2"),
     breakpoint_threshold_type="percentile").split_text(long_text)
 print(len(recursive), len(semantic))                   # semantic: variable sizes, topical coherence — and embedding cost at ingest
 ```
@@ -416,7 +416,7 @@ def sync_doc(doc_id: str, text: str, client, emb):
         return "unchanged"                                        # skip: no re-embedding cost
     client.delete("docs", filter=f'doc_id == "{doc_id}"')          # targeted delete of stale chunks
     rows = [{"id": f"{doc_id}#{i}", "doc_id": doc_id, "content_hash": h,
-             "text": c, "dense_vector": v, "embedding_model": "llama-3.2-nv-embedqa-1b-v2"}
+             "text": c, "dense_vector": v, "embedding_model": "llama-nemotron-embed-1b-v2"}
             for i, (c, v) in enumerate(zip(chunk(text), emb.embed_documents(chunk(text))))]
     client.insert("docs", rows)
     return "reindexed"
@@ -480,7 +480,7 @@ curate = Sequential([
     PiiModifier(entities=["PERSON", "EMAIL", "US_SSN"]),    # Presidio-backed PII redaction, pre-index
 ])
 clean_docs = curate(raw_docs)                               # -> deduped, filtered, redacted corpus
-# only NOW do you chunk -> embed (llama-3.2-nv-embedqa-1b-v2) -> upsert to Milvus
+# only NOW do you chunk -> embed (llama-nemotron-embed-1b-v2) -> upsert to Milvus
 ```
 
 *What to notice:* this is the stage **between raw extraction and chunking**, and it's **NeMo Curator**, not Retriever — the exam separates "prepare the data" (Curator) from "serve retrieval" (Retriever). Fuzzy dedup is **MinHash + LSH**; everything runs GPU-accelerated (cuDF/Dask) for ~10–100× CPU throughput. PII redaction here is the *load-bearing* control (trap #12); skipping dedup is what makes retrieval return the same passage five times (scenario drill #8). Class/method names are illustrative — verify against the current Curator API.

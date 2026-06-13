@@ -60,6 +60,10 @@ echo "$NVIDIA_API_KEY"                            # must print your key, startin
 
 > **Two different keys, do not confuse them.** The **`NVIDIA_API_KEY`** from build.nvidia.com authenticates *hosted API* calls. An **NGC API key** (from [ngc.nvidia.com](https://ngc.nvidia.com)) authenticates *pulling NIM containers* from `nvcr.io` — only needed for the optional self-hosted step 5. Different keys, different jobs.
 
+> **Which model to pick (June 2026).** These labs default to **`meta/llama-3.3-70b-instruct`** because it is stable, OpenAI-tool-calling-capable, and present on the hosted catalog — the least likely to break a copy-paste command. Just know the *current NVIDIA headline family is **Nemotron 3*** (debuted Dec 2025, expanded through H1 2026, showcased at Computex June 2026): **Nano** (~30B total / ~3B active, e.g. `nvidia/nemotron-3-nano-30b-a3b`), **Super** (~100B/10B), **Ultra** (~500–550B/50–55B, NVIDIA's largest open model, positioned for reasoning/planning/agentic), plus **Nemotron 3 Nano Omni** (multimodal). Any of them is a drop-in swap for the labs — change only `model_name` / `model`. Don't hard-code "best model"; pick by capability lane.
+>
+> **Catalog id vs Hugging Face repo — don't confuse them.** The string that goes in the `model` field is the **hosted-catalog id** — lowercase, e.g. `nvidia/nemotron-3-nano-30b-a3b`. On Hugging Face the *weight repos* carry a different, longer name with a precision suffix — `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16` / `-FP8` / `-NVFP4`. Use the lowercase catalog id for hosted API calls; the HF repo names only matter when you download weights to self-host. Pasting an HF repo name into a hosted call → 404 "model not found."
+
 ### Step 2 — First NIM API call
 
 **Goal:** prove the key works and learn the endpoint shape. NIM endpoints are **OpenAI-API compatible** — the single most leverageable fact on the platform.
@@ -240,15 +244,15 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="not-needed-locally
 
 **Goal:** read an NVIDIA reference architecture, then reproduce a *minimal* version of its RAG pipeline on CPU using hosted endpoints.
 
-**Blueprints** are production-grade *reference architectures* (not tutorials) at **[build.nvidia.com/blueprints](https://build.nvidia.com/blueprints)**. The **AI-Q Research Assistant** is an enterprise research agent built on the **NeMo Agent Toolkit** (with LangChain Deep Agents): an orchestrator classifies intent, a shallow agent gives quick cited answers, a deep agent writes long-form cited reports. Its repo is **[github.com/NVIDIA-AI-Blueprints/aiq](https://github.com/NVIDIA-AI-Blueprints/aiq)** (build card: build.nvidia.com/nvidia/aiq).
+**Blueprints** are production-grade *reference architectures* (not tutorials) at **[build.nvidia.com/blueprints](https://build.nvidia.com/blueprints)**. The **AI-Q Research Assistant** is an enterprise research agent built on the **NeMo Agent Toolkit** (with LangChain Deep Agents): an orchestrator classifies intent, a shallow agent gives quick cited answers, a deep agent writes long-form cited reports. Its repo is **[github.com/NVIDIA-AI-Blueprints/aiq](https://github.com/NVIDIA-AI-Blueprints/aiq)** (build card: build.nvidia.com/nvidia/aiq). As of June 2026 the Blueprint is on the **v2.x** line and its *default* models have moved to the **Nemotron 3** family — `nvidia/nemotron-3-nano-30b-a3b` for the researcher/classifier (Nemotron 3 Super optional) — with the renamed NeMo Retriever embedder **`nvidia/llama-nemotron-embed-vl-1b-v2`** (the `llama-3.2-nv-embedqa/-nemoretriever` names were rebranded to the Nemotron line in NeMo Retriever NIM 1.13.0). The CPU reproduction below deliberately keeps the simpler, still-live `meta/llama-3.3-70b-instruct` + `nv-embedqa-e5-v5` so it runs anywhere — the architecture lesson is identical.
 
 Most learners **cannot** run the full stack (it wants ~2× H100 to serve LLM + embedding + reranker NIMs at once). That's fine — the learning is in the **architecture map** and a **partial reproduction**. Map its components and which are NVIDIA-specific vs generic:
 
 | Component | Role | In the full Blueprint | Your CPU reproduction (hosted API) |
 |---|---|---|---|
-| LLM | reasoning / generation | NIM on GPU | NIM hosted API (`integrate.api.nvidia.com`) |
-| Embedding | text → vectors | NIM on GPU | NIM hosted: **`nvidia/nv-embedqa-e5-v5`** (1024-dim) |
-| Reranker | re-score passages | NIM on GPU | NIM hosted: **`nvidia/nv-rerankqa-mistral-4b-v3`** |
+| LLM | reasoning / generation | NIM on GPU (v2.x default: **Nemotron 3 Nano 30B**) | NIM hosted API (`integrate.api.nvidia.com`) |
+| Embedding | text → vectors | NIM on GPU (**`llama-nemotron-embed-vl-1b-v2`**, renamed in Retriever NIM 1.13.0) | NIM hosted: **`nvidia/nv-embedqa-e5-v5`** (1024-dim) |
+| Reranker | re-score passages | NIM on GPU (**`llama-nemotron-rerank-1b-v2`**) | NIM hosted: **`nvidia/llama-nemotron-rerank-1b-v2`** (the older `nv-rerankqa-mistral-4b-v3` is now *deprecated* on the catalog) |
 | Vector store | similarity search | **Milvus** (containerized) | **FAISS** (`faiss-cpu`, in-memory) |
 | Doc parsing | PDF/table extraction | **NeMo Retriever** | PyPDF / hardcoded text |
 | Orchestration | the agent | **NeMo Agent Toolkit** | a Python script |

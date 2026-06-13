@@ -477,7 +477,7 @@
   <div class="tbl-scroll"><table class="tbl">
     <tr><th>Metric</th><th>Measures</th><th>Diagnoses</th></tr>
     <tr><td><b>Faithfulness / groundedness</b></td><td>Are claims in the <b>answer</b> supported by the <b>retrieved context</b>? (claims supported ÷ total claims, 0–1)</td><td class="bad">Hallucination by the generator</td></tr>
-    <tr><td><b>Answer relevance</b></td><td>Does the <b>answer</b> actually address the <b>question</b>? (RAGAS: generate questions from the answer, cosine-similarity to original question)</td><td class="mid">Evasive, off-topic, or incomplete answers</td></tr>
+    <tr><td><b>Answer relevance</b></td><td>Does the <b>answer</b> actually address the <b>question</b>? RAGAS measures it by <b>reverse-engineering</b>: an LLM generates the question(s) the answer <i>seems</i> to be answering, then cosine-compares them to the real question. A focused answer reconstructs the original question well (high score); an evasive/padded one reconstructs a different question (low score).</td><td class="mid">Evasive, off-topic, or incomplete answers</td></tr>
     <tr><td><b>Context relevance (context precision/recall)</b></td><td>Is the <b>retrieved context</b> relevant to the <b>question</b>, with minimal noise?</td><td class="mid">Retrieval quality, as seen from the generation side</td></tr>
   </table></div>
   <div class="callout"><b>Key exam pattern:</b> faithful but wrong overall = <b>retrieval problem</b>; relevant context but unfaithful answer = <b>generation problem</b>.</div>
@@ -630,8 +630,9 @@
     <div class="card cyan"><h4><span class="icon">🧲</span>NeMo Retriever NIMs <span class="pill b">RAG levers</span></h4>
       <p>The RAG-tuning levers as products.</p>
       <ul>
-        <li><b>Embedding NIMs:</b> NV-EmbedQA-E5-v5, NV-EmbedQA-Mistral7B-v2 (multilingual), Snowflake-Arctic-Embed-L</li>
-        <li><b>Reranking NIM:</b> NV-RerankQA-Mistral4B-v3 — a LoRA-fine-tuned reranker based on <b>Mistral-7B-v0.1 that keeps only the first 16 of 32 layers (~4 B params)</b> for throughput, switches attention causal → bi-directional, with mean-pooling over the last layer + a binary classification head emitting a single relevance logit</li>
+        <li><b>Current family (NeMo Retriever NIM 1.13.0 — the Nemotron rebrand):</b> embedding NIMs <code>llama-nemotron-embed-1b-v2</code> (8192-token, multilingual, Matryoshka dynamic-dim; was <code>llama-3.2-nv-embedqa-1b-v2</code>), <code>llama-nemotron-embed-300m-v2</code>, VL embed <code>llama-nemotron-embed-vl-1b-v2</code></li>
+        <li><b>Reranking NIM:</b> <code>llama-nemotron-rerank-1b-v2</code> (+ VL <code>llama-nemotron-rerank-vl-1b-v2</code>)</li>
+        <li><b>Architecture still examinable</b> (older <b>NV-RerankQA-Mistral4B-v3</b>): a LoRA-fine-tuned reranker based on <b>Mistral-7B-v0.1 that keeps only the first 16 of 32 layers (~4 B params)</b> for throughput, switches attention causal → bi-directional, with mean-pooling over the last layer + a binary classification head emitting a single relevance logit. (Older embed names: NV-EmbedQA-E5-v5, NV-EmbedQA-Mistral7B-v2, Snowflake-Arctic-Embed-L.)</li>
         <li>Adding the reranking NIM over a wider retrieval set <b>improves accuracy and cuts cost</b> (fewer, better chunks to the LLM)</li>
       </ul>
     </div>
@@ -662,6 +663,7 @@
   <div class="grid c2">
     <div class="card amber"><h4><span class="icon">📐</span>NAT Sizing Calculator <span class="pill a">how many GPUs?</span></h4>
       <p><code>nat sizing calc</code> estimates the <b>GPU cluster size</b> to serve a workflow at scale. Runs at several <b>concurrency levels</b>, uses the Profiler subsystem, then <b>slope-based estimation</b> to extrapolate.</p>
+      <p style="margin-top:6px"><b>"Slope-based" =</b> it plots a metric (latency / runtime) vs concurrent users across the sampled points, <b>fits a line</b> (slope = how fast latency degrades per added user), and extrapolates that line out to <code>--target_users</code> — scaling the GPU count up until the projected point still clears the runtime target. (Linear extrapolation → give it several concurrency samples, not one.)</p>
       <ul>
         <li><b>Inputs:</b> <code>--target_users</code> + target workflow runtime (max acceptable response time); optionally <code>--target_llm_latency</code> (P95 LLM latency, seconds)</li>
         <li><b>Modes:</b> <b>online</b> profiles live; <b>offline_mode</b> re-sizes from previously gathered metrics (gather once, plan many SLAs)</li>
@@ -679,6 +681,24 @@
       </ul>
     </div>
   </div>
+
+  <h3>NAT Optimizer — automated, eval-driven config tuning <span class="tag">nat optimize</span></h3>
+  <p class="lede">The <b>"tuning" half of the domain done inside the toolkit</b>, and easy to miss. Where the Profiler/Sizing Calculator only <i>measure</i>, the Optimizer <b>changes the workflow config to raise your eval score</b> — using your <code>nat eval</code> evaluators as the <b>objective function</b>. No GPU training loop, no labeled fine-tune data.</p>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🎛️</span>What it tunes &amp; how</h4>
+      <ul>
+        <li><b>Hyperparameters</b> (temperature, top_p, max_tokens) via <b>Optuna</b></li>
+        <li><b>Prompts</b> via a <b>genetic algorithm</b> — a <i>population</i> of prompt variants evolved each generation with <b>LLM-powered mutation (+ optional recombination)</b>, kept if eval score improves</li>
+        <li><b>Model choices</b> per node</li>
+        <li>Install <code>nvidia-nat[config-optimizer]</code> → run <code>nat optimize</code></li>
+      </ul>
+    </div>
+    <div class="card amber"><h4><span class="icon">📈</span>Multi-objective Pareto</h4>
+      <p>Balances <b>accuracy vs cost vs latency</b> and plots <b>pairwise Pareto curves</b> — pick the middle of the front for balance, or the high-accuracy corner if accuracy is paramount. NVIDIA's example: <b>~35% accuracy gain + ~20% token-efficiency gain</b>.</p>
+      <p style="margin-top:6px"><b>On the tuning ladder:</b> automated prompt + parameter optimization — <i>above</i> hand-written prompting, <i>below</i> fine-tuning (no new weights, no training data).</p>
+    </div>
+  </div>
+  <div class="callout"><b>Three NAT "improve" tools, don't swap them:</b> <b>Profiler</b> = <i>where</i> do tokens/latency go? · <b>Sizing Calculator</b> = <i>how many GPUs</i> for N users at latency L? · <b>Optimizer</b> = automatically <i>find the config/prompt</i> that maximizes eval score within a cost/latency budget.</div>
 
   <h3>NAT Finetuning Harness — DPO vs GRPO/OpenPipe ART <span class="tag">when prompting + RAG plateau</span></h3>
   <p class="lede">NAT's Finetuning Harness turns evaluated workflow runs into training data and drives finetuning. Two documented paths — the exam split is <b>preference pairs (DPO) vs reward-driven RL (GRPO)</b>.</p>
@@ -765,6 +785,9 @@
     <tr><td>Evaluate a LangGraph agent's trajectory + profile latency/tokens in CI</td><td class="good">NeMo Agent Toolkit <code>nat eval</code> (+ profiler)</td></tr>
     <tr><td>LoRA / SFT / DPO / GRPO a model via API</td><td class="good">NeMo Customizer</td></tr>
     <tr><td>Improve retrieval ranking in production RAG</td><td class="good">NeMo Retriever reranking NIM</td></tr>
+    <tr><td>Profile per-step token/latency to find the cost hotspot</td><td class="good">NAT Profiler (<code>nat eval</code> + <code>general.profiler</code>)</td></tr>
+    <tr><td>Estimate GPU count to serve N users at latency L</td><td class="good">NAT Sizing Calculator (<code>nat sizing calc</code>)</td></tr>
+    <tr><td>Auto-tune prompts/temperature/model choice to max eval score within a cost/latency budget</td><td class="good">NAT Optimizer (<code>nat optimize</code>)</td></tr>
   </table></div>
 </section>
 
@@ -792,6 +815,7 @@
     <div class="trap"><h4><span class="n">#17</span>DPO vs GRPO / OpenPipe ART</h4><p>Both NAT finetuning paths above SFT, but <b>DPO learns from labeled (chosen, rejected) pairs (no RL)</b>; <b>GRPO is RL</b> comparing a <i>group</i> of sampled rollouts against a <b>reward</b> (no pairs, no reward model). <span class="fix">"Score outcomes, no preference pairs, improve through experience" → GRPO via OpenPipe ART</span>.</p></div>
     <div class="trap"><h4><span class="n">#18</span>Data Flywheel ≠ just "fine-tuning"</h4><p>Its signature: use <b>production traffic</b> to <b>discover a smaller/distilled model</b> meeting cost/latency/accuracy bars (NVIDIA cites up to <b>98.6%</b> cost cut), then human-review-and-promote. <span class="fix">"Continuously cut inference cost using real traffic" → Data Flywheel Blueprint, not Customizer alone</span>.</p></div>
     <div class="trap"><h4><span class="n">#19</span>Red teaming is an eval, run continuously</h4><p>A Level-4 evaluator for injection / jailbreak / PII / harmful / out-of-scope, reported as <b>block rate</b>; schedule it (drift) and include benign inputs to catch false-positive blocks. <span class="fix">It <i>finds</i> gaps offline; NeMo Guardrails <i>blocks</i> them at runtime — don't conflate</span>.</p></div>
+    <div class="trap"><h4><span class="n">#20</span>Three NAT "improve" tools — don't swap them</h4><p><b>Profiler</b> <i>measures</i> where tokens/latency go; <b>Sizing Calculator</b> <i>measures</i> GPU count for N users at latency L; <b>Optimizer</b> (<code>nat optimize</code>) <i>changes</i> config (prompts via genetic algorithm, hyperparameters via Optuna, model choice) to maximize the eval score on an accuracy/cost/latency Pareto front. <span class="fix">"Auto-improve my prompts/settings against my eval without fine-tuning" → Optimizer, not Customizer (trains weights) and not Profiler (only measures)</span>.</p></div>
   </div>
 </section>
 
@@ -914,7 +938,7 @@ result = evaluate(
     embeddings=LangchainEmbeddingsWrapper(NVIDIAEmbeddings(model="nvidia/nv-embedqa-e5-v5")),
 )
 print(result)  # e.g. {'faithfulness': 1.0, 'answer_relevancy': 0.97, 'llm_context_precision_with_reference': 1.0}</code></pre>
-    <p><b>What to notice:</b> the three metrics are the three triangle edges from §3.6 — answer↔context, answer↔question, context↔question. <code>ResponseRelevancy</code> needs the <code>embeddings</code> argument (it embeds judge-generated questions and cosine-compares them to the original question). Older form was lowercase singleton instances <code>from ragas.metrics import faithfulness, answer_relevancy, context_precision</code> passed with an HF <code>Dataset</code>; ragas v0.2+ uses metric classes and <code>EvaluationDataset.from_list</code>.</p>
+    <p><b>What to notice:</b> the three metrics are the three triangle edges from §3.6 — answer↔context, answer↔question, context↔question. <code>ResponseRelevancy</code> needs the <code>embeddings</code> argument (it embeds judge-generated questions and cosine-compares them to the original question). Older form was lowercase singleton instances <code>from ragas.metrics import faithfulness, answer_relevancy, context_precision</code> passed with an HF <code>Dataset</code>; ragas v0.2+ uses metric classes and <code>EvaluationDataset.from_list</code>. Model strings are illustrative — <code>nv-embedqa-e5-v5</code> still works, but the current NeMo Retriever embedding NIM is <code>nvidia/llama-nemotron-embed-1b-v2</code>.</p>
   </div>
 
   <div class="card purple">
@@ -1109,6 +1133,7 @@ eval:
     <li>NVIDIA blog — AI Agent Evaluation — <a href="https://developer.nvidia.com/blog/mastering-agentic-techniques-ai-agent-evaluation/">developer.nvidia.com/blog/mastering-agentic-techniques-ai-agent-evaluation</a></li>
     <li>NeMo Agent Toolkit eval &amp; profiler — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/evaluate.html">docs.nvidia.com/nemo/agent-toolkit/…/evaluate</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a></li>
     <li>NAT Sizing Calculator (GPU cluster planning) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/sizing-calc.html">docs.nvidia.com/…/sizing-calc</a></li>
+    <li>NAT Optimizer (<code>nat optimize</code> · Optuna + GA prompt optimization · Pareto) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/optimizer.html">docs.nvidia.com/…/optimizer</a></li>
     <li>NAT Finetuning Harness — DPO via Customizer, GRPO via OpenPipe ART — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/finetuning/index.html">docs.nvidia.com/…/finetuning</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/finetuning/rl_with_openpipe.html">GRPO w/ OpenPipe ART</a> · <a href="https://github.com/OpenPipe/ART">OpenPipe/ART</a></li>
     <li>NAT Red Teaming (Lakera-contributed) — <a href="https://www.lakera.ai/blog/red-teaming-agentic-capabilities-in-nvidia-nemo-agent-toolkit">lakera.ai/blog/red-teaming-…-nemo-agent-toolkit</a></li>
     <li>Data Flywheel Blueprint — <a href="https://github.com/NVIDIA-AI-Blueprints/data-flywheel">github.com/NVIDIA-AI-Blueprints/data-flywheel</a> · <a href="https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel/blueprintcard">build.nvidia.com blueprint card</a></li>

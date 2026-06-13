@@ -350,6 +350,7 @@
         <text x="520" y="214" font-size="11.5" text-anchor="middle" style="fill:var(--muted)">"Let it run but make sure we can review / get pinged" ⇒ the <tspan font-weight="bold" style="fill:var(--amber)">automated + logging / + alerts</tspan> rungs (HOOTL-with-teeth / HOTL-lite).</text>
       </svg>
     </div>
+    <div class="note"><b>HIC vs HITL on the same action — a wire transfer:</b> under <b>HITL</b> the agent <i>has</i> the <code>send_wire</code> tool and, once approved, <i>the agent calls it</i>; under <b>HIC</b> the agent never has <code>send_wire</code> at all — it emits a structured proposal and <i>the human</i> initiates the transfer in the banking system. <b>HIC removes the capability; HITL gates it.</b></div>
 
     <h3>Latency cost vs human involvement (qualitative)</h3>
     <div class="card">
@@ -436,7 +437,8 @@
 graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
              config={"configurable": {"thread_id": "t1"}})</pre>
 
-    <p class="sub" style="margin-top:.6rem">LangChain also ships a <b>HITL middleware</b> that wraps tool calls and auto-interrupts on configured tools with the approve / edit / reject / respond decision set.</p>
+    <p class="sub" style="margin-top:.6rem">LangChain also ships a <b>HITL middleware</b> (<code>HumanInTheLoopMiddleware</code>, via <code>interrupt_on</code>) that wraps tool calls and auto-interrupts on configured tools with the approve / edit / reject / respond decision set.</p>
+    <div class="note"><b>Currency note (LangChain/LangGraph 1.x):</b> the agent factory is now <code>langchain.agents.create_agent</code>; the older <code>langgraph.prebuilt.create_react_agent</code> is <b>deprecated</b> (still works with a warning, removal targeted for 2.0). <code>create_agent</code> runs on LangGraph and hosts the middleware stack — including the HITL middleware above. The raw <code>interrupt()</code> / <code>Command(resume=...)</code> mechanism is <b>unchanged</b> across the 1.x move.</div>
 
     <h3>Gotchas the exam can probe</h3>
     <div class="grid g2">
@@ -628,6 +630,7 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
         </g>
       </svg>
     </div>
+    <div class="note"><b>Risk-taxonomy hook:</b> these controls are the direct mitigation for <b>Excessive Agency</b> — <code>LLM06:2025</code> in the <i>OWASP Top 10 for LLM Applications (2025)</i> and a named risk in the newer <i>OWASP Top 10 for Agentic Applications (Dec 2025)</i>. Excessive agency = an agent with too much permission / autonomy / functionality; the fix is least-privilege tools, allowlists, HITL gates, and sandboxing. A scenario that says "the agent used a tool/permission it shouldn't have" points here — not at prompt tuning.</div>
   </div>
 </section>
 
@@ -915,7 +918,7 @@ rails.register_action(request_human_approval, name="request_human_approval")</co
   <div class="wrap">
     <div class="kicker">Section 10 &middot; Code Companion</div>
     <h2>Code Companion: oversight patterns as runnable code</h2>
-    <p class="sub">All snippets verified against current (2025-26) APIs. Model layer defaults to NVIDIA endpoints &mdash; <code>export NVIDIA_API_KEY=nvapi-...</code> for build.nvidia.com, or point <code>base_url</code> at a local NIM (<code>http://localhost:8000/v1</code>) and the key becomes irrelevant.</p>
+    <p class="sub">All snippets verified against current (2025-26) APIs. Model layer defaults to NVIDIA endpoints &mdash; <code>export NVIDIA_API_KEY=nvapi-...</code> for build.nvidia.com, or point <code>base_url</code> at a local NIM (<code>http://localhost:8000/v1</code>) and the key becomes irrelevant. The model strings below (<code>meta/llama-3.3-70b-instruct</code>) are generic, swappable endpoints; on a current (mid-2026) stack you'd typically point them at the <b>Nemotron 3</b> family (Nemotron 3 Nano ~30B/3B-active for cheap routing/verification, Super/Ultra for harder reasoning) &mdash; none of the oversight mechanics depend on the specific model.</p>
 
     <div class="grid">
       <div class="card accent-green">

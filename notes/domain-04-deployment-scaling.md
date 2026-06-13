@@ -107,7 +107,7 @@ Caveats: set sensible **downscale stabilization** (default 5 min) to avoid flapp
 |---|---|---|
 | Split | Each layer's weight matrices **sharded across GPUs** (all GPUs work on every token) | **Contiguous groups of layers** assigned to different GPUs/nodes (stages) |
 | Communication | All-reduce **every layer** → needs **NVLink/NVSwitch**-class bandwidth | Activations passed **between stages only** → tolerates PCIe / inter-node links |
-| Effect | **Lowers per-request latency** (TTFT and ITL); splits weights *and* KV cache | **Raises throughput / enables bigger models**, but adds latency (pipeline bubbles) |
+| Effect | **Lowers per-request latency** (TTFT and ITL); splits weights *and* KV cache | **Raises throughput / enables bigger models**, but adds latency (**pipeline bubbles** = stages stall idle waiting on the previous stage — e.g., GPU1 can't start layer 41 until GPU0 finishes layer 40 for that token, so each GPU sits idle part of every step) |
 | Typical use | 2-8 GPUs within one NVLink island | across nodes, or PCIe-only boxes |
 | Rule of thumb | `TP = GPUs per node`, `PP = number of nodes` for models too big for one node | combine TP×PP for multi-node (e.g., 405B: TP8 × PP2) |
 
@@ -474,7 +474,7 @@ spec:
       target: {type: AverageValue, averageValue: 100m}   # 100m = scale when avg KV-cache usage > 10%
 ```
 
-*What to notice:* the metric type is `Pods` and a custom metric — not `Resource: cpu` (trap #1). The full pipeline is NIM `/v1/metrics` → Prometheus scrape (ServiceMonitor) → prometheus-adapter rule republishing it on the custom-metrics API → HPA; without the adapter rule this YAML applies cleanly but never scales. Pick the `averageValue` threshold from your GenAI-Perf curves, not from defaults.
+*What to notice:* the metric type is `Pods` and a custom metric — not `Resource: cpu` (trap #1). The `100m` is Kubernetes **milli-unit** notation (the same `m` as `250m` CPU = ¼ core): `100m` = 0.1 of the metric's raw value. Because `gpu_cache_usage_perc` is reported as a 0–1 fraction, `100m` = 0.1 = scale out when average KV-cache occupancy crosses **10%** — it does *not* mean 100% or 100 ms. The full pipeline is NIM `/v1/metrics` → Prometheus scrape (ServiceMonitor) → prometheus-adapter rule republishing it on the custom-metrics API → HPA; without the adapter rule this YAML applies cleanly but never scales. Pick the `averageValue` threshold from your GenAI-Perf curves, not from defaults.
 
 **6. GenAI-Perf: benchmark TTFT / ITL / throughput against the NIM**
 
@@ -490,7 +490,7 @@ genai-perf profile \
   --tokenizer meta-llama/Llama-3.1-8B-Instruct
 ```
 
-*What to notice:* the output table gives avg/p75/p90/p99 for **Time To First Token**, **Inter Token Latency**, request latency, plus **output token throughput (tok/s)** and **request throughput (RPS)** — read p90/p99 (SLOs), never just averages. ISL 2048 / OSL 256 is the agent traffic shape (long context, short decisions); re-run while sweeping `--concurrency` (1, 8, 32, 64...) and pick the knee where throughput flattens but latency still meets SLO. Note: NVIDIA's NIM benchmarking guide now ships **AIPerf** (`aiperf profile`, near-identical flags) as GenAI-Perf's successor — older docs/exam material say GenAI-Perf.
+*What to notice:* the output table gives avg/p75/p90/p99 for **Time To First Token**, **Inter Token Latency**, request latency, plus **output token throughput (tok/s)** and **request throughput (RPS)** — read p90/p99 (SLOs), never just averages. ISL 2048 / OSL 256 is the agent traffic shape (long context, short decisions); re-run while sweeping `--concurrency` (1, 8, 32, 64...) and pick the knee where throughput flattens but latency still meets SLO. Note: NVIDIA's NIM benchmarking guide now leads with **AIPerf** (`pip install aiperf`, `aiperf profile`, near-identical flags) as its newer client-side benchmarking tool; NVIDIA presents the two as complementary rather than AIPerf hard-replacing GenAI-Perf — and **GenAI-Perf remains the name the NCP-AAI courseware/exam material uses**, so expect GenAI-Perf on the test.
 
 **7. trtllm-build: limits get baked into the engine at compile time**
 
@@ -554,20 +554,21 @@ spec:
 import os
 from fastapi import FastAPI
 from langchain_nvidia_ai_endpoints import ChatNVIDIA   # pip install langchain-nvidia-ai-endpoints
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent              # LangChain/LangGraph 1.x canonical factory
+# (legacy: from langgraph.prebuilt import create_react_agent — deprecated in v1.0, removed in v2.0)
 
 llm = ChatNVIDIA(
     base_url=os.environ["NIM_BASE_URL"],                # e.g. http://nim-llm:8000/v1 (K8s Service DNS)
     model=os.environ.get("NIM_MODEL", "meta/llama-3.1-8b-instruct"),
 )
-agent = create_react_agent(llm, tools=[])               # your tools here; ChatNVIDIA supports bind_tools
+agent = create_agent(llm, tools=[])                     # your tools here; ChatNVIDIA supports bind_tools
 app = FastAPI()
 
 @app.post("/invoke")
 async def invoke(body: dict):
     result = await agent.ainvoke({"messages": [("user", body["query"])]})
     return {"answer": result["messages"][-1].content}
-# Dockerfile: FROM python:3.12-slim; pip install fastapi uvicorn langgraph langchain-nvidia-ai-endpoints
+# Dockerfile: FROM python:3.12-slim; pip install fastapi uvicorn langchain langgraph langchain-nvidia-ai-endpoints
 # CMD ["uvicorn", "agent_app:app", "--host", "0.0.0.0", "--port", "8080"]
 ```
 

@@ -1002,6 +1002,7 @@ completion = rails.generate(
 <section id="owasp">
   <h2 class="sec"><span class="chip">07</span>Threat Landscape — OWASP Top 10 for LLM Apps (2025)</h2>
   <p class="lede">Memorize the list <b>and</b> the mapping to the blueprint's wording. LLM01 prompt injection is the headline; <b>indirect injection is the signature agentic risk</b>.</p>
+  <div class="callout"><b>Two OWASP lists now — cite both.</b> (a) <strong>OWASP Top 10 for LLM Applications 2025</strong> (v2.0, the list below — what the exam blueprint maps to; memorize it cold). (b) The new <strong>OWASP Top 10 for <em>Agentic</em> Applications (2026)</strong>, released <strong>Dec 9, 2025</strong> by the OWASP GenAI Security Project — agent-specific (tool misuse, memory poisoning, agent-to-agent risks; prompt injection still the top risk; ships the FinBot CTF reference app). Default to the LLM 2025 list for exam answers; expect real-world agentic checklists to cite the 2026 one.</div>
 
   <div class="grid g5">
     <div class="card accent-red"><h4><span class="tag pl-r">LLM01</span> Prompt Injection</h4><p><b>Blueprint:</b> prompt injection (direct + indirect)</p><p>Attacker input overrides developer instructions</p></div>
@@ -1145,12 +1146,14 @@ garak --list_probes</pre>
       <circle cx="110" cy="65" r="10" style="fill:var(--green)"/><text x="110" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--green)">Aug 2024</text><text x="110" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">entered into force</text>
       <circle cx="360" cy="65" r="10" style="fill:var(--red)"/><text x="360" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--red)">Feb 2025</text><text x="360" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">prohibitions applied</text>
       <circle cx="610" cy="65" r="10" style="fill:var(--blue)"/><text x="610" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--blue)">Aug 2025</text><text x="610" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">GPAI obligations</text>
-      <circle cx="860" cy="65" r="10" style="fill:var(--orange)"/><text x="860" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--orange)">Aug 2026</text><text x="860" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">most high-risk obligations</text>
+      <circle cx="780" cy="65" r="10" style="fill:var(--orange)"/><text x="780" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--orange)">Aug 2026</text><text x="780" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">AI Office enforcement powers</text>
+      <circle cx="900" cy="65" r="10" style="fill:var(--purple)"/><text x="900" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--purple)">Dec 2027</text><text x="900" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">Annex III high-risk (deferred)</text>
     </svg>
   </div>
+  <div class="callout"><b>Currency caveat (June 2026):</b> <strong>Aug 2, 2026</strong> = the original date the <strong>EU AI Office gains full enforcement powers (fines)</strong> AND the original Annex III high-risk application date — but the <strong>Digital Omnibus</strong> reached a <strong>provisional trilogue agreement on May 7, 2026</strong> (Council + Parliament + Commission) that <em>defers stand-alone Annex III high-risk obligations to <strong>Dec 2, 2027</strong></em> (Annex I embedded high-risk → Aug 2, 2028). It takes full legal effect only on formal adoption + publication in the Official Journal (expected before Aug 2, 2026). For the exam, the Aug 2, 2026 dates are the canonical "textbook" answer; in practice the high-risk deadline has been pushed to Dec 2, 2027.</div>
   <div class="callout"><b>GPAI obligations are NOT a fifth tier:</b> general-purpose AI (foundation) model duties sit <strong>alongside</strong> the four use-based tiers in a separate chapter (applied Aug 2025) — all GPAI providers owe technical documentation, a training-data summary, and a copyright-compliance policy; GPAI models with <strong>systemic risk</strong> (presumed when training compute exceeds <strong>10<sup>25</sup> FLOPs</strong>) additionally owe model evaluations / adversarial testing, serious-incident reporting, and cybersecurity protections.</div>
 
-  <h3 class="sub">NIST AI RMF — voluntary US framework (AI RMF 1.0 Jan 2023 + Generative AI Profile NIST-AI-600-1 July 2024)</h3>
+  <h3 class="sub">NIST AI RMF — voluntary US framework (AI RMF 1.0 Jan 2023 + GenAI Profile NIST-AI-600-1 Jul 2024 + Agentic AI Profile NIST AI 100-5)</h3>
   <div class="grid g4">
     <div class="card accent-top"><h4>GOVERN</h4><p>Culture, policies, accountability — <b>cross-cutting</b> across all functions.</p></div>
     <div class="card accent-blue"><h4>MAP</h4><p>Context, intended use, risk identification.</p></div>
@@ -1160,6 +1163,7 @@ garak --list_probes</pre>
   <p style="margin-top:14px;font-size:.85rem;color:var(--muted)"><b style="color:var(--ink)">Goal — trustworthy AI characteristics:</b>
     <span class="pill pl-g">valid &amp; reliable</span><span class="pill pl-g">safe</span><span class="pill pl-g">secure &amp; resilient</span><span class="pill pl-g">accountable &amp; transparent</span><span class="pill pl-g">explainable</span><span class="pill pl-g">privacy-enhanced</span><span class="pill pl-g">fair</span>
   </p>
+  <div class="callout"><b>2026 additions to know:</b> the <strong>Agentic AI Profile (NIST AI 100-5)</strong> extends the RMF to autonomous tool-using / multi-agent systems; the <strong>CAISI AI Agent Standards Initiative</strong> (Feb 2026; an agent interoperability/safety profile expected ~Q4 2026) and an Apr 2026 critical-infrastructure RMF profile concept note show the US side catching up to agentic specifics.</div>
 
   <h3 class="sub">EU AI Act vs NIST AI RMF — the classic exam contrast</h3>
   <div class="tblwrap">
@@ -1197,10 +1201,11 @@ garak --list_probes</pre>
       <tr><th></th><th>C2PA Content Credentials</th><th>Invisible watermarking (e.g., Google SynthID)</th></tr>
       <tr><td><b>What it is</b></td><td class="cell-b">Signed, tamper-evident <b>metadata manifest</b> attached to media — records origin (which model/device) and edit history</td><td class="cell-g">Imperceptible signal embedded <b>in the content itself</b> (images/audio/text)</td></tr>
       <tr><td><b>Robustness</b></td><td class="cell-o">Metadata can be <b>stripped</b> (but tampering is evident)</td><td class="cell-g"><b>Survives compression / screenshots</b> where metadata gets stripped</td></tr>
-      <tr><td><b>Status</b></td><td>Being standardized as <b>ISO/DIS 22144</b> (ISO Draft International Standard — <i>not</i> ISO/IEC); backed by Adobe, Microsoft, Google, OpenAI, NVIDIA</td><td><b>10B+ items watermarked</b> with SynthID (Google DeepMind, late 2025; images/video/audio/text)</td></tr>
+      <tr><td><b>Status</b></td><td>Being standardized as <b>ISO/DIS 22144</b> (ISO Draft International Standard — <i>not</i> ISO/IEC); backed by Adobe, Microsoft, Google, OpenAI, NVIDIA</td><td><b>100B+ media items watermarked</b> (20B+ images) with SynthID (Google DeepMind, mid-2026; images/video/audio/text)</td></tr>
     </table>
   </div>
-  <div class="callout"><b>Provenance ≠ detection:</b> provenance <strong>proves origin claims</strong>; detectors <strong>guess</strong>. EU AI Act Art. 50 requires machine-readable marking of synthetic content (enforced from <strong>Aug 2026</strong>); <strong>California SB 942</strong> is similar. Robust deployments use <strong>both</strong> C2PA and watermarking.</div>
+  <div class="callout"><b>Provenance ≠ detection:</b> provenance <strong>proves origin claims</strong>; detectors <strong>guess</strong>. EU AI Act Art. 50 requires machine-readable marking of synthetic content — and <em>unlike</em> the deferred Annex III high-risk rules, Art. 50 transparency <strong>still applies from Aug 2, 2026</strong> (the Omnibus only added a ~6-month grace, to Dec 2, 2026, for content/systems already on the market). <strong>California SB 942</strong> is similar. Robust deployments use <strong>both</strong> C2PA and watermarking.</div>
+  <div class="callout"><b>2026 convergence — the dual-layer norm:</b> the two layers are merging. <strong>OpenAI became C2PA-conformant AND added the SynthID watermark</strong> across ChatGPT/API/Codex images (~May 19, 2026); <strong>NVIDIA embeds SynthID in its Cosmos</strong> world models; SynthID <strong>detection is rolling into Google Search and Chrome</strong>. Current exam-safe answer = "use <strong>both</strong> C2PA and SynthID," not "C2PA is niche."</div>
 </section>
 
 <!-- ============================== NVIDIA STACK ============================== -->

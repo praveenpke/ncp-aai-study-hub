@@ -859,7 +859,8 @@ window.addEventListener('resize', ()=>{
     <div class="card"><h4>Triton Inference Server <span class="pill p-blue">:8002 /metrics</span></h4>
       <p><code>nv_inference_request_success</code> / <code>_failure</code>, <code>nv_inference_count</code>, and <code>nv_inference_queue_duration_us</code> — time requests wait before batching: <b>the</b> signal for dynamic-batching tuning and saturation.</p></div>
     <div class="card"><h4>NIM for LLMs <span class="pill p-green">/v1/metrics (vLLM-derived)</span></h4>
-      <p><code>num_requests_running</code> (in-flight concurrency), <code>num_requests_waiting</code> (<b>queue depth</b>), <code>gpu_cache_usage_perc</code> (<b>KV-cache utilization</b>), TTFT and e2e latency histograms, token counters.</p></div>
+      <p><code>num_requests_running</code> (in-flight concurrency), <code>num_requests_waiting</code> (<b>queue depth</b>), <code>gpu_cache_usage_perc</code> (<b>KV-cache utilization</b>), TTFT and e2e latency histograms, token counters.</p>
+      <p style="margin-top:8px"><b>On the wire:</b> NIM passes vLLM metrics through unmodified, so the real Prometheus names carry a <code>vllm:</code> prefix (e.g. <code>vllm:num_requests_waiting</code>, <code>vllm:gpu_cache_usage_perc</code>). In the newer vLLM v1 engine the cache gauge was renamed <code>vllm:gpu_cache_usage_perc</code> → <code>vllm:kv_cache_usage_perc</code> — check your build's <code>/metrics</code> output and label your PromQL/HPA accordingly. (Concept names are used unprefixed below for readability.)</p></div>
   </div>
   <div class="key"><b>Scaling rule:</b> rising queue depth with flat GPU util = capacity exhausted → scale out. <b>HPA/KEDA autoscaling for LLM services keys on queue depth or KV-cache usage via Prometheus Adapter — NOT CPU/memory</b> (CPU is meaningless for a GPU-bound service).</div>
 
@@ -974,6 +975,7 @@ window.addEventListener('resize', ()=>{
   </div>
 
   <div class="key"><b>Burn-rate alerting beats naive thresholds:</b> fast-burn <b>14.4×</b> over 1 h → <b>page</b>; slow-burn <b>6×</b> over 6 h → <b>ticket</b>. They alert on <i>user-impacting trends</i>, not single spikes — alerting on every p99 blip is the distractor answer.</div>
+  <div class="note"><b>Where does <code>14.4×</code> come from?</b> (Google-SRE worked example.) A 1 h window is <code>1 / 720</code> of a 30-day budget window. Burn-rate <b>1×</b> means you spend exactly that slice — <code>1/720</code> of the budget — in the hour. The classic page threshold fires when you'd burn <b>2% of the whole month's budget in 1 h</b>: <code>0.02 × 720 = 14.4×</code>. So <code>14.4×</code> isn't magic — it's "at this rate you torch 2% of a 30-day budget every hour" (≈ the entire budget in ~2 days). The dual 1 h + 5 m windows just confirm the fast burn is happening <i>right now</i>, suppressing flaps.</div>
   <div class="note"><b>Alert routing &amp; severity:</b> Prometheus alert rules fire into <b>Alertmanager</b>, which deduplicates, groups, silences, and routes by severity — <b>page</b> (fast-burn, user-impacting now) vs. <b>ticket</b> (slow-burn, fix this week). Every page must be <b>actionable with a linked runbook</b>; non-actionable alerts cause alert fatigue — the classic anti-pattern answer.</div>
 
   <h3 class="block">Grafana dashboards — three layers</h3>

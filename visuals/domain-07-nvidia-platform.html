@@ -601,6 +601,7 @@ resp = client.chat.completions.create(
       <span class="flowchip">Pull same NIM from NGC</span><span class="farrow">→</span>
       <span class="flowchip hl">Self-host in your VPC — change base_url only</span>
     </div>
+    <p style="margin-top:12px;font-size:.86rem;color:var(--muted)"><b>2026 additions (post-GTC-2026):</b> the catalog added <b>Rubin-optimized inference profiles</b> (pre-compiled TRT-LLM engines for Rubin-gen GPUs, joining H100 / A100 / L40S / Blackwell) and a <b>free Developer-Program tier</b> for self-hosting R&amp;D (up to 16 GPUs). The <b>NIM Operator</b> can now also deploy <b>NeMo microservices</b> as Kubernetes custom resources, not just NIMs.</p>
   </div>
 </section>
 
@@ -664,8 +665,8 @@ resp = client.chat.completions.create(
 
   <h3>NeMo Retriever — the RAG family of NIMs</h3>
   <div class="grid g3">
-    <div class="card" style="border-top:4px solid var(--cyan)"><h4>Embedding NIM</h4><p><code>llama-3.2-nv-embedqa-1b-v2</code> — 8,192-token context, 26 languages, Matryoshka/dynamic embedding dims.</p></div>
-    <div class="card" style="border-top:4px solid var(--cyan)"><h4>Reranking NIM</h4><p><code>llama-3.2-nv-rerankqa-1b-v2</code> — relevance logits, 3.5x smaller than the older mistral-4b reranker.</p></div>
+    <div class="card" style="border-top:4px solid var(--cyan)"><h4>Embedding NIM</h4><p><code>llama-nemotron-embed-1b-v2</code> — 8,192-token context, multilingual, Matryoshka/dynamic embedding dims. <span style="color:var(--muted)">(renamed from <code>llama-3.2-nv-embedqa-1b-v2</code> in NeMo Retriever NIM 1.13.0; 300M + VL variants also exist).</span></p></div>
+    <div class="card" style="border-top:4px solid var(--cyan)"><h4>Reranking NIM</h4><p><code>llama-nemotron-rerank-1b-v2</code> — relevance logits, 3.5x smaller than the older mistral-4b reranker. <span style="color:var(--muted)">(renamed from <code>llama-3.2-nv-rerankqa-1b-v2</code>).</span></p></div>
     <div class="card" style="border-top:4px solid var(--cyan)"><h4>Extraction: NV-Ingest</h4><p>a.k.a. <b>NeMo Retriever Extraction</b> (same thing, two names): scalable pipeline parsing messy enterprise docs (PDF, DOCX, PPTX) into <b>text, tables, charts, images/infographics</b> as structured metadata + chunks. Runs with specialized NIMs (page-elements, table-structure, OCR/PaddleOCR) or a single nemotron-parse model. Engine behind the multimodal PDF blueprints.</p></div>
   </div>
   <div class="diagram">
@@ -673,10 +674,10 @@ resp = client.chat.completions.create(
       <defs><marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7" style="fill:var(--cyan)"/></marker></defs>
       <g font-size="12.5" font-weight="700" text-anchor="middle">
         <rect x="10"  y="30" width="135" height="52" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/><text x="77"  y="52" style="fill:var(--cyan)">NV-Ingest</text><text x="77" y="70" style="fill:var(--muted)" font-weight="400" font-size="11">extract PDF/DOCX/PPTX</text>
-        <rect x="180" y="30" width="135" height="52" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/><text x="247" y="52" style="fill:var(--text)">Embedding NIM</text><text x="247" y="70" style="fill:var(--muted)" font-weight="400" font-size="11">nv-embedqa-1b-v2</text>
+        <rect x="180" y="30" width="135" height="52" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/><text x="247" y="52" style="fill:var(--text)">Embedding NIM</text><text x="247" y="70" style="fill:var(--muted)" font-weight="400" font-size="10">nemotron-embed-1b-v2</text>
         <rect x="350" y="30" width="135" height="52" rx="10" style="fill:var(--panel);stroke:var(--line)"/><text x="417" y="52" style="fill:var(--text)">Vector DB</text><text x="417" y="70" style="fill:var(--muted)" font-weight="400" font-size="11">Milvus (blueprint default)</text>
         <rect x="520" y="30" width="120" height="52" rx="10" style="fill:var(--panel);stroke:var(--line)"/><text x="580" y="58" style="fill:var(--text)">Retrieve</text>
-        <rect x="675" y="30" width="130" height="52" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/><text x="740" y="52" style="fill:var(--text)">Rerank NIM</text><text x="740" y="70" style="fill:var(--muted)" font-weight="400" font-size="11">nv-rerankqa-1b-v2</text>
+        <rect x="675" y="30" width="130" height="52" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/><text x="740" y="52" style="fill:var(--text)">Rerank NIM</text><text x="740" y="70" style="fill:var(--muted)" font-weight="400" font-size="10">nemotron-rerank-1b-v2</text>
         <rect x="840" y="30" width="110" height="52" rx="10" style="fill:color-mix(in srgb,var(--green) 15%,var(--panel));stroke:var(--green)"/><text x="895" y="58" style="fill:var(--green)">LLM NIM</text>
       </g>
       <g style="stroke:var(--cyan)" stroke-width="2.5" fill="none">
@@ -715,11 +716,13 @@ resp = client.chat.completions.create(
   <p class="sub">Open model family (open weights + much of the training data/recipes), post-trained for <b>agentic work: reasoning, tool calling, instruction following</b>. Three sizes, one naming rule. All ship as NIMs on build.nvidia.com and NGC.</p>
 
   <div class="tablewrap"><table>
-    <tr><th>Tier</th><th>Llama Nemotron (2025)</th><th>Nemotron 3 (late 2025/2026)</th><th>Built for</th></tr>
-    <tr><td><b>Nano</b></td><td>8B (from Llama 3.1 8B)</td><td>~32B total / ~3B active MoE, 1M-token context</td><td class="cell-good">Edge, RTX PCs, Jetson, cost-sensitive real-time; highest per-$ throughput</td></tr>
-    <tr><td><b>Super</b></td><td>49B (distilled from Llama 3.3 70B)</td><td>~100B total / ~10B active</td><td class="cell-good"><b>Best accuracy/throughput on a single (H100) GPU</b>; default for single-agent + multi-agent prod</td></tr>
-    <tr><td><b>Ultra</b></td><td>253B (from Llama 3.1 405B)</td><td>~500B total / ~50B active</td><td class="cell-good">Max accuracy, datacenter/multi-GPU, hardest reasoning</td></tr>
+    <tr><th>Tier</th><th>Llama Nemotron (2025, prior gen)</th><th>Nemotron 3 (current headline family)</th><th>Built for</th></tr>
+    <tr><td><b>Nano</b></td><td>8B (from Llama 3.1 8B)</td><td>~30B total / ~3B active MoE (31.6B/3.2B), 1M-token context</td><td class="cell-good">Edge, RTX PCs, Jetson, cost-sensitive real-time; highest per-$ throughput</td></tr>
+    <tr><td><b>Super</b></td><td>49B (distilled from Llama 3.3 70B)</td><td><b>120B total / 12B active</b> (NVFP4 4-bit on Blackwell; rel. Mar 11, 2026)</td><td class="cell-good"><b>Best accuracy/throughput on a single (H100) GPU</b>; default for single-agent + multi-agent prod</td></tr>
+    <tr><td><b>Ultra</b></td><td>253B (from Llama 3.1 405B)</td><td><b>~550B total / ~55B active</b> (largest open NVIDIA model)</td><td class="cell-good">Max accuracy, datacenter/multi-GPU, hardest reasoning/planning/agentic</td></tr>
   </table></div>
+
+  <div class="callout"><h4>Reading "total / active"</h4><p>Nemotron 3 are <b>mixture-of-experts (MoE)</b> models: <b>total</b> params = how much must load into GPU memory; <b>active</b> params = how many run per token (sets latency / throughput / cost). So Nano is 30B total but only ~3B active — it <i>fits and runs cheaply at the edge</i> even though "30B" looks bigger than the old 8B Nano. <b>Size the GPU by total; reason about speed/cost by active.</b></p></div>
 
   <h3>Llama Nemotron parameter sizes</h3>
   <div class="bars">
@@ -730,7 +733,7 @@ resp = client.chat.completions.create(
 
   <div class="grid g3">
     <div class="card"><h4>🔀 Toggleable reasoning</h4><p>Signature feature: turn "thinking" on/off <b>per request via the system prompt</b> (<code>detailed thinking on/off</code>) — one model serves both cheap fast paths and deep reasoning paths. <b>Not</b> a separate model download.</p></div>
-    <div class="card"><h4>🧬 Nemotron 3 architecture</h4><p>Adds granular <b>reasoning budget control</b> and uses a hybrid <b>Mamba-Transformer MoE</b> architecture.</p></div>
+    <div class="card"><h4>🧬 Nemotron 3 — the current family</h4><p>Nano <b>debuted Dec 15, 2025</b>; Super (120B/12B) <b>released Mar 11, 2026</b>; Ultra (~550B/~55B) shown at <b>Computex 2026</b> (~June 1). Adds granular <b>reasoning budget control</b> and a hybrid <b>Mamba-2 + Transformer latent-MoE</b> architecture (~3.3x throughput vs similar open models). A multimodal <b>Nemotron 3 Nano Omni</b> handles text/image/video/audio in one 30B model.</p></div>
     <div class="card"><h4>🛰 Edge &amp; domain variants</h4><p>Nano sized for RTX AI PCs and Jetson; domain variants: <b>Nemotron Parse</b> (document extraction), <b>NemoGuard</b> safety models, Nemotron retriever models.</p></div>
   </div>
 
@@ -820,12 +823,13 @@ resp = client.chat.completions.create(
 <section id="mcp">
   <div class="kicker">Section 9</div>
   <h2><span class="num">09</span>MCP and A2A in the NVIDIA Stack</h2>
-  <p class="sub"><b>MCP = Model Context Protocol</b> (open standard connecting an agent to <b>tools/data</b>); <b>A2A = Agent-to-Agent protocol</b> (open standard for agents calling <b>other agents</b> across processes/vendors). Rule of thumb: MCP → tools; A2A → other agents.</p>
+  <p class="sub"><b>MCP = Model Context Protocol</b> (Anthropic-<i>originated</i> open standard connecting an agent to <b>tools/data</b>); <b>A2A = Agent-to-Agent protocol</b> (Google-<i>originated</i> open standard for agents calling <b>other agents</b> across processes/vendors). Rule of thumb: MCP → tools; A2A → other agents. <b>Both are now Linux-Foundation-governed open standards</b> — don't call them "Anthropic's" or "Google's" protocol.</p>
   <div class="grid g3">
     <div class="card" style="border-top:4px solid var(--green)"><h4>Primary home: NeMo Agent Toolkit</h4><p>MCP <b>client</b> (call external MCP tool servers from a workflow) and MCP <b>server</b> (expose any toolkit function/agent via MCP, FastMCP-based: <code>nat mcp serve</code>); <b>A2A</b> for cross-process agent teams with authentication.</p></div>
     <div class="card" style="border-top:4px solid var(--red)"><h4>NIM does NOT speak MCP</h4><p>NIM speaks the <b>OpenAI API</b>. MCP lives at the <i>agent orchestration</i> layer, not the inference layer.</p></div>
     <div class="card" style="border-top:4px solid var(--blue)"><h4>Blueprints expose MCP too</h4><p>Newer Blueprints (AI-Q, enterprise RAG) expose retrieval/tools as MCP servers so any MCP-capable agent (Claude, LangGraph, etc.) can call NVIDIA RAG pipelines as tools.</p></div>
   </div>
+  <div class="callout"><h4>Governance is current-exam material (June 2026)</h4><p><b>MCP</b> joined the new <b>Agentic AI Foundation (AAIF)</b> under the Linux Foundation (announced ~Dec 2025), alongside Block's <i>goose</i> and OpenAI's <i>AGENTS.md</i> — vendor-neutral governance, projects keep technical autonomy. <b>A2A</b> was donated by Google to the Linux Foundation and reached <b>v1.0 in early 2026</b>: production-grade <b>Signed Agent Cards</b> (cryptographic domain verification), <b>multi-tenancy</b> (multiple agents per endpoint), and <b>version negotiation</b> (v0.3→v1.0 backward-compatible); 150+ organizations participate.</p></div>
 </section>
 
 <!-- ============ NAT INTERNALS ============ -->
@@ -1083,7 +1087,7 @@ nat serve --config_file workflow.yaml   # REST + chat UI (interactive chat)</cod
     <div class="ans"><b>NeMo Guardrails: dialog/input rails for topic control + execution rails for tool validation.</b> Runtime policing = Guardrails, not fine-tuning.</div></details>
 
   <details class="drill"><summary><span class="qnum">4</span>You must ingest 2M PDFs full of tables and charts into a vector DB for a multimodal RAG agent.</summary>
-    <div class="ans"><b>NV-Ingest (NeMo Retriever extraction) → embedding NIM (llama-3.2-nv-embedqa) → Milvus → reranking NIM; start from the multimodal PDF/RAG Blueprint.</b> Extraction at scale is exactly what NV-Ingest exists for.</div></details>
+    <div class="ans"><b>NV-Ingest (NeMo Retriever extraction) → embedding NIM (<code>llama-nemotron-embed-1b-v2</code>) → Milvus → reranking NIM (<code>llama-nemotron-rerank-1b-v2</code>); start from the multimodal PDF/RAG Blueprint.</b> Extraction at scale is exactly what NV-Ingest exists for.</div></details>
 
   <details class="drill"><summary><span class="qnum">5</span>A 70B model powers a routing agent; costs are too high. You have months of production logs and want a smaller model with equal task accuracy, promoted only if it proves out.</summary>
     <div class="ans"><b>Data flywheel: NeMo Curator on logs → NeMo Customizer LoRA-tunes Nemotron Nano → NeMo Evaluator gates promotion → deploy as NIM.</b> Classic distillation flywheel question.</div></details>
@@ -1154,11 +1158,13 @@ from langchain_community.vectorstores import FAISS
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 
 # Embedding NIM (hosted by default via NVIDIA_API_KEY; pass base_url="http://localhost:8001/v1" for a local NIM)
-emb = NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2", truncate="END")
+# Current name (NeMo Retriever NIM 1.13.0+); older blueprints used "nvidia/llama-3.2-nv-embedqa-1b-v2"
+emb = NVIDIAEmbeddings(model="nvidia/llama-nemotron-embed-1b-v2", truncate="END")
 vs = FAISS.from_texts(chunks, emb)                       # chunks: list[str] from your ingest step
 
 # Reranking NIM compresses a wide candidate set down to the best few
-reranker = NVIDIARerank(model="nvidia/llama-3.2-nv-rerankqa-1b-v2", top_n=4)
+# Current name; older form was "nvidia/llama-3.2-nv-rerankqa-1b-v2"
+reranker = NVIDIARerank(model="nvidia/llama-nemotron-rerank-1b-v2", top_n=4)
 retriever = ContextualCompressionRetriever(
     base_compressor=reranker,
     base_retriever=vs.as_retriever(search_kwargs={"k": 20}),  # over-fetch 20, rerank to 4

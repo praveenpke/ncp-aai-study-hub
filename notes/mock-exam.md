@@ -191,7 +191,7 @@ Options resemble: (a) tool count is large and tools are easily confused, (b) sub
 *Concept link: D4 — Dynamo for agents.*
 
 **Q26.** A 70B model on 2×H100 handles ~20–40 concurrent requests. You have **8×H100** and need **500** concurrent users on a 70B model. Feasible? (NOT-feasible recognition.)
-**→ No** — 8×H100 ≈ 4 NIM instances ≈ 80–160 concurrent for 70B. Options: drop to an 8B/13B model (8×H100 could clear 500+), raise the GPU budget to ~24–32×H100, add aggressive caching, or queue with timeouts. **Validate with the NAT Sizing Calculator.** *Distractor:* "yes, just add replicas" ignores that you have no more GPUs to give them.
+**→ No.** Do the GPU math: a 70B model in FP16 (~140 GB weights) needs ~2×H100 (80 GB each) **per NIM instance**, so 8×H100 ÷ 2 = **only 4 instances** → 4 × (20–40) ≈ **80–160 concurrent**, far short of 500. Options: drop to an 8B/13B model (one instance fits on a single H100, so 8×H100 could clear 500+), raise the GPU budget to ~24–32×H100, add aggressive caching, or queue with timeouts. **Validate with the NAT Sizing Calculator.** *Distractor:* "yes, just add replicas" ignores that you have no more GPUs to give them — replicas need GPUs you don't have.
 *Concept link: D4 — sizing, GPU planning.*
 
 **Q27.** Why is **request-count autoscaling** insufficient for agent endpoints? (Concept trap.)
@@ -227,7 +227,7 @@ Options resemble: (a) tool count is large and tools are easily confused, (b) sub
 ### Domain 6 — Knowledge Integration & Data (×5)
 
 **Q34.** Name the AI-Q / NVIDIA RAG Blueprint's retrieval stack (embed, rerank, vector store) and the default generation model class.
-**→ Embed: `llama-3.2-nv-embedqa-1b-v2`. Rerank: `llama-3.2-nv-rerankqa-1b-v2`. Vector store: Milvus (GPU-accelerated via cuVS).** Default generation in the current AI-Q Blueprint is **Llama-3.3-Nemotron-Super-49B-v1.5** (the older docs said a generic "Llama 3" — verify the model on the specific Blueprint page, as it changes). *Distractor:* "FAISS / OpenAI embeddings" — not the NVIDIA stack.
+**→ Embed: `llama-nemotron-embed-1b-v2`. Rerank: `llama-nemotron-rerank-1b-v2`. Vector store: Milvus (GPU-accelerated via cuVS).** **(Currency:** NeMo Retriever NIM **1.13.0** renamed these to the *Nemotron* brand — older docs/strings call them `llama-3.2-nv-embedqa-1b-v2` and `llama-3.2-nv-rerankqa-1b-v2`; either name may appear on the exam, but the current model strings are the `llama-nemotron-*` ones. The embed model keeps 8192-token context, multilingual, Matryoshka dynamic-dim.**)** Default generation in the current AI-Q Blueprint is a **Nemotron Super**–class model (e.g. `Llama-3.3-Nemotron-Super-49B-v1.5`), swappable to any NIM-compatible model — verify on the specific Blueprint page, as it changes. *Distractor:* "FAISS / OpenAI embeddings" — not the NVIDIA stack.
 *Concept link: D6 — AI-Q components.*
 
 **Q35.** When does **sparse** retrieval (BM25) beat **dense** (embeddings)?
@@ -315,7 +315,7 @@ The exam's hardest questions cross domain boundaries. These two integrative scen
 
 | Domain | Decision | NVIDIA primitive |
 |--------|----------|------------------|
-| Knowledge (D6) | GPU ingest → adaptive chunk (~512 tok / 64 overlap) → embed → index → two-stage retrieve | NeMo Curator → `nv-embedqa-1b-v2` (NIM) → Milvus+cuVS → `nv-rerankqa-1b-v2` |
+| Knowledge (D6) | GPU ingest → adaptive chunk (~512 tok / 64 overlap) → embed → index → two-stage retrieve | NeMo Curator → `llama-nemotron-embed-1b-v2` (NIM) → Milvus+cuVS → `llama-nemotron-rerank-1b-v2` |
 | Development (D2) | Citation-required system prompt; tool registry; FastAPI front | NAT YAML + FastAPI server |
 | Evaluation (D3) | Retriever (recall@5≥0.85, MRR≥0.80) + RAG (faithfulness≥0.90) + adversarial + latency; CI gate | NAT Evaluation Framework + Profiler |
 | Safety (D9) | **input** (Content Safety + Jailbreak NIM + topic-control dialog rail), **retrieval** (filter chunks), **output** (fact-check + PII redaction), **execution** (validate tool calls) | NeMo Guardrails (Colang) + Safety NIMs |

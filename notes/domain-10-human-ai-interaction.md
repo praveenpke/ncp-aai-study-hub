@@ -50,7 +50,7 @@ Key exam heuristic: **risk and reversibility decide the loop position, not conve
 
 **The finer-grained ladder (and "human-in-command").** The three-tier HITL/HOTL/HOOTL split is the coarse view. A more granular ladder runs **fully automated → automated + logging → automated + alerts → approval-required → HITL → HOTL → human-in-command**, moving from max autonomy/min oversight (left) to min autonomy/max oversight (right). The two endpoints worth knowing for the exam:
 
-- **Human-in-command (HIC)** — the *EU AI Act* term (alongside HITL and HOTL) for the strongest oversight: the human makes every decision and the agent only *recommends/drafts*; the human also decides *whether and when to use the system at all*. (Analogy: a driver who can always override the autopilot.) On the NVIDIA stack, HIC is realized by having the agent produce **structured output** (a proposal) and stopping there — execution is the human's to trigger. Distinguish HIC ("agent drafts, human acts") from HITL ("agent acts after the human approves the specific step").
+- **Human-in-command (HIC)** — the *EU AI Act* term (alongside HITL and HOTL) for the strongest oversight: the human makes every decision and the agent only *recommends/drafts*; the human also decides *whether and when to use the system at all*. (Analogy: a driver who can always override the autopilot.) On the NVIDIA stack, HIC is realized by having the agent produce **structured output** (a proposal) and stopping there — execution is the human's to trigger. Distinguish HIC ("agent drafts, human acts") from HITL ("agent acts after the human approves the specific step"). *Same action, two regimes:* for a wire transfer — under **HITL** the agent has the `send_wire` tool and, on approval, *the agent calls it*; under **HIC** the agent never has `send_wire` at all — it outputs a structured proposal and *the human* initiates the transfer in the banking system. HIC removes the capability; HITL gates the capability.
 - **Automated + logging / automated + alerts** sit *left* of approval-required: the agent acts without blocking, but every action is **logged** (post-hoc review) or specific action types **alert** a monitor. These are the HOOTL-with-teeth and HOTL-lite rungs — useful when a scenario says "let it run but make sure we can review/get pinged."
 
 Each rung maps to an NVIDIA primitive: *automated + logging* → NAT audit/observability; *automated + alerts* → NAT observability metrics/traces; *approval-required* → NeMo Guardrails execution rail + NAT interactive workflow; *HITL/HOTL* → NAT interactive workflows (WebSocket/HTTP) with streaming; *human-in-command* → NAT structured output. The exam may ask you to place a described system on this ladder and name the primitive.
@@ -88,7 +88,7 @@ def transfer_funds(state):
 graph.invoke(Command(resume={"approve": True}), config={"configurable": {"thread_id": "t1"}})
 ```
 
-LangChain also ships a **HITL middleware** that wraps tool calls and auto-interrupts on configured tools with the approve/edit/reject/respond decision set. Gotchas the exam can probe:
+LangChain also ships a **HITL middleware** (`HumanInTheLoopMiddleware`, configured via `interrupt_on={"tool": ...}`) that wraps tool calls and auto-interrupts on configured tools with the approve/edit/reject/respond decision set. (Currency note — LangChain/LangGraph 1.x: the agent factory is now **`langchain.agents.create_agent`**; the older `langgraph.prebuilt.create_react_agent` is **deprecated** (still works with a warning, slated for removal in 2.0). `create_agent` runs on LangGraph and is where the middleware stack — including this HITL middleware — lives. The raw `interrupt()`/`Command(resume=...)` mechanism below is unchanged across the 1.x move.) Gotchas the exam can probe:
 - `interrupt()` **requires a checkpointer** configured — no persistence, no interrupt.
 - On resume, the **node re-runs from its start** (code before `interrupt()` executes again) — side effects before the interrupt must be idempotent.
 - Old-style "static breakpoints" (`interrupt_before=["node"]`) pause before a node; the dynamic `interrupt()` function is the modern, conditional, in-node mechanism.
@@ -167,6 +167,8 @@ These are *environment-level* controls that hold even if the model is jailbroken
 - **Sandboxing:** execute agent-generated code/commands in isolated, disposable environments (containers, microVMs, network-egress-restricted) so a bad action "breaks the sandbox, not the host." Essential for code-execution tools, browser agents, and self-modifying agents. NVIDIA's OpenShell (below) is the NVIDIA-stack instantiation (a standalone Apache-2.0 runtime, kernel-level isolation via a per-sandbox container): out-of-process policy enforcement + sandboxed execution + deny-by-default permissions.
 
 Defense-in-depth ordering: prompts/guardrails (soft) → tool-layer validation → permissions/allowlists (hard) → sandbox/isolation (hard) → monitoring/audit/kill switch (detect & stop).
+
+**Risk-taxonomy hook (why these controls exist).** The hard controls above are the direct mitigation for **Excessive Agency** — `LLM06:2025` in the *OWASP Top 10 for LLM Applications (2025)* and a named risk in the newer *OWASP Top 10 for Agentic Applications (Dec 2025)*. Excessive agency = an agent with too much permission/autonomy/functionality doing damaging things; the fix is exactly least-privilege tools, allowlists, HITL gates on high-impact actions, and sandboxing. If an exam scenario frames a failure as "the agent had a tool/permission it shouldn't have used," the answer lives in this section, not in prompt tuning.
 
 ## 4. NVIDIA-specific layer
 
@@ -396,7 +398,7 @@ If a question offers "escalation paths with confidence thresholds — NVIDIA-doc
 
 ## 10. Code Companion
 
-> All snippets verified against current (2025-26) APIs. Model layer defaults to NVIDIA endpoints — `export NVIDIA_API_KEY=nvapi-...` for build.nvidia.com, or point `base_url` at a local NIM (`http://localhost:8000/v1`) and the key becomes irrelevant.
+> All snippets verified against current (2025-26) APIs. Model layer defaults to NVIDIA endpoints — `export NVIDIA_API_KEY=nvapi-...` for build.nvidia.com, or point `base_url` at a local NIM (`http://localhost:8000/v1`) and the key becomes irrelevant. The model strings below (`meta/llama-3.3-70b-instruct`) are generic, swappable endpoints; on a current (mid-2026) stack you'd typically point them at the **Nemotron 3** family (e.g. Nemotron 3 Nano ~30B/3B-active for cheap routing/verification, Super/Ultra for harder reasoning) — none of the oversight mechanics depend on the specific model.
 
 **1) LangGraph HITL end-to-end: interrupt → inspect → approve / edit / reject**
 

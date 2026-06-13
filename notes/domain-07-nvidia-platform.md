@@ -75,6 +75,8 @@ docker run --rm --gpus all --shm-size=16GB \
 
 **build.nvidia.com (API catalog):** browsable catalog of 100+ models (LLMs, VLMs, embedding, reranking, speech, biology, visual gen). Every model card gives sample code and a "Deploy with Docker" tab — try hosted first, download the same NIM later. This *try-then-own* path is the exam's favorite NIM fact.
 
+**2026 NIM additions (post-GTC-2026):** the catalog added **Rubin-optimized inference profiles** (pre-compiled TRT-LLM engines for NVIDIA's Rubin-generation GPUs, joining the existing H100/A100/L40S/Blackwell profiles) and a **free Developer-Program tier** for self-hosting R&D (up to 16 GPUs). The **NIM Operator** can now also deploy **NeMo microservices** as Kubernetes custom resources, not just NIMs.
+
 **Tiny example:**
 ```python
 from openai import OpenAI
@@ -122,9 +124,10 @@ flowchart LR
 - Distinct from competitors because it can model **dialog** (not just classify single messages) and is LLM-vendor-agnostic.
 
 #### NeMo Retriever
-- The **RAG family of NIMs**: text **embedding** (e.g., `llama-3.2-nv-embedqa-1b-v2` — 8,192-token context, 26 languages, Matryoshka/dynamic embedding dims), **reranking** (`llama-3.2-nv-rerankqa-1b-v2` — relevance logits, 3.5x smaller than the older mistral-4b reranker), and **extraction**.
+- The **RAG family of NIMs**: text **embedding** (`llama-nemotron-embed-1b-v2` — 8,192-token context, multilingual, Matryoshka/dynamic embedding dims), **reranking** (`llama-nemotron-rerank-1b-v2` — relevance logits, 3.5x smaller than the older mistral-4b reranker), and **extraction**. There are also 300M and VL (vision-language) variants: `llama-nemotron-embed-300m-v2`, `llama-nemotron-embed-vl-1b-v2`, `llama-nemotron-rerank-vl-1b-v2`.
+  - **NAMING — know both (June 2026):** the **NeMo Retriever NIM 1.13.0** release **renamed these models to the Nemotron brand**. Old `llama-3.2-nv-embedqa-1b-v2` → new **`llama-nemotron-embed-1b-v2`**; old `llama-3.2-nemoretriever-300m-embed-v2` → **`llama-nemotron-embed-300m-v2`**; old `llama-3.2-nv-rerankqa-1b-v2` / `-nemoretriever-*` reranker → **`llama-nemotron-rerank-1b-v2`**. Same models, new strings — exam-safe answers should use the **`llama-nemotron-*`** names; the `llama-3.2-nv-*` names are the deprecated form you may still see in older blueprints.
 - **NV-Ingest** (a.k.a. *NeMo Retriever Extraction*): a scalable microservice pipeline that parses messy enterprise documents (PDF, DOCX, PPTX) and extracts **text, tables, charts, images/infographics** as structured metadata + chunks, then embeds them — the engine behind the multimodal PDF blueprints. Can run with specialized NIMs (page-elements, table-structure, OCR/PaddleOCR) or a single nemotron-parse model.
-- Typical flow: NV-Ingest extract → embed NIM → vector DB (Milvus is the blueprint default) → retrieve → **rerank NIM** → LLM NIM.
+- Typical flow: NV-Ingest extract → embed NIM (`llama-nemotron-embed-1b-v2`) → vector DB (Milvus is the blueprint default) → retrieve → **rerank NIM** (`llama-nemotron-rerank-1b-v2`) → LLM NIM.
 
 #### NeMo Agent Toolkit (formerly **AgentIQ**, then **Agent Intelligence Toolkit / AIQ**)
 - Open-source library (`pip install nvidia-nat`; CLI: `nat run`, `nat serve`, `nat eval`) for **connecting, profiling, evaluating, and optimizing teams of agents**. It is explicitly **NOT another agent framework** — it sits *alongside* LangChain, LangGraph, LlamaIndex, CrewAI, Semantic Kernel, Google ADK, or plain Python, treating agents/tools/workflows as composable **function calls** described in **YAML workflow configs**.
@@ -135,13 +138,17 @@ flowchart LR
 
 NVIDIA's open model family (open weights + much of the training data/recipes), post-trained for **agentic work: reasoning, tool calling, instruction following**. Three sizes, one naming rule:
 
-| Tier | Llama Nemotron (2025) | Nemotron 3 (late 2025/2026) | Built for |
-|---|---|---|---|
-| **Nano** | 8B (from Llama 3.1 8B) | ~32B total / ~3B active MoE, 1M-token context | Edge, RTX PCs, Jetson, cost-sensitive real-time; highest per-$ throughput |
-| **Super** | 49B (distilled from Llama 3.3 70B) | ~100B total / ~10B active | **Best accuracy/throughput on a single (H100) GPU**; default for single-agent + multi-agent prod |
-| **Ultra** | 253B (from Llama 3.1 405B) | ~500B total / ~50B active | Max accuracy, datacenter/multi-GPU, hardest reasoning |
+> **Reading the Nemotron 3 numbers — "total / active":** these are mixture-of-experts (MoE) models, so each tier shows *total* parameters (how much must be loaded into GPU memory) vs *active* parameters (how many actually run per token — what sets latency/throughput/cost). Example: Nano is 30B total but only ~3B active, so it *fits and runs cheaply at the edge* despite "30B" looking bigger than the old 8B Nano. Always size the GPU by **total**, and reason about speed/cost by **active**.
 
-- Signature feature: **toggleable reasoning** — turn "thinking" on/off **per request via the system prompt** (`detailed thinking on/off`), so one model serves both cheap fast paths and deep reasoning paths. Nemotron 3 adds granular *reasoning budget control* and uses a hybrid **Mamba-Transformer MoE** architecture.
+
+| Tier | Llama Nemotron (2025) | Nemotron 3 (current headline family) | Built for |
+|---|---|---|---|
+| **Nano** | 8B (from Llama 3.1 8B) | ~30B total / ~3B active MoE (HF: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-...`, 31.6B/3.2B), 1M-token context | Edge, RTX PCs, Jetson, cost-sensitive real-time; highest per-$ throughput |
+| **Super** | 49B (distilled from Llama 3.3 70B) | **120B total / 12B active** (NVFP4 4-bit training on Blackwell; released Mar 11, 2026) | **Best accuracy/throughput on a single (H100) GPU**; default for single-agent + multi-agent prod |
+| **Ultra** | 253B (from Llama 3.1 405B) | **~550B total / ~55B active** (largest open NVIDIA model) | Max accuracy, datacenter/multi-GPU, hardest reasoning/planning/agentic |
+
+- **Nemotron 3 is the current headline family (know this for June 2026).** Nemotron 3 **Nano debuted Dec 15, 2025**; Super (120B/12B active) released **Mar 11, 2026**; Ultra (~550B/~55B active) was showcased at **Computex 2026** (Jensen keynote, ~June 1, 2026) and released early June 2026. There is also a **Nemotron 3 Nano Omni** (multimodal text/image/video/audio in one 30B hybrid-MoE, superseding the older Nemotron Nano VL V2). The 2025 *Llama Nemotron* sizes (8B / 49B / 253B) are the prior generation — still valid history, but Nemotron 3 is what a current guide foregrounds.
+- Signature feature: **toggleable reasoning** — turn "thinking" on/off **per request via the system prompt** (`detailed thinking on/off`), so one model serves both cheap fast paths and deep reasoning paths. Nemotron 3 adds granular *reasoning budget control* and uses a hybrid **Mamba-2 + Transformer latent-MoE** architecture (MoE layers interleaved with cheap Mamba-2 layers; ~3.3x throughput vs similarly sized open models).
 - Edge variants: Nemotron Nano models sized for RTX AI PCs and Jetson; also domain variants (Nemotron Parse for document extraction, NemoGuard safety models, Nemotron retriever models).
 - All ship as NIMs on build.nvidia.com and NGC.
 
@@ -193,7 +200,9 @@ Canonical examples (recognize by description):
 
 ### 3.8 MCP and A2A in the NVIDIA stack
 
-Acronyms first (the exam may spell them out): **MCP = Model Context Protocol** (Anthropic-originated open standard for connecting agents to tools/data over a client–server interface); **A2A = Agent-to-Agent protocol** (Google-originated, now Linux Foundation, open standard for agents discovering and calling *each other* across processes/vendors). Rule of thumb: MCP connects an agent to **tools**; A2A connects an agent to **other agents**.
+Acronyms first (the exam may spell them out): **MCP = Model Context Protocol** (Anthropic-*originated* open standard for connecting agents to tools/data over a client–server interface); **A2A = Agent-to-Agent protocol** (Google-*originated* open standard for agents discovering and calling *each other* across processes/vendors). Rule of thumb: MCP connects an agent to **tools**; A2A connects an agent to **other agents**.
+
+- **Governance (current, June 2026 — don't call these "vendor protocols"):** **both are now under the Linux Foundation.** MCP joined the new **Agentic AI Foundation (AAIF)** under the Linux Foundation (announced ~Dec 2025), alongside Block's *goose* and OpenAI's *AGENTS.md* — vendor-neutral governance, projects keep technical autonomy. **A2A** was donated by Google to the Linux Foundation (mid-2025) and reached **v1.0 in early 2026**: production-grade additions are **Signed Agent Cards** (cryptographic domain verification), **multi-tenancy** (multiple agents per endpoint), and **version negotiation** (v0.3→v1.0 backward-compatible); 150+ organizations participate. Exam-safe phrasing: MCP/A2A are *open, foundation-governed* standards that Anthropic/Google originated — not "Anthropic's protocol" or "Google's protocol."
 
 - **NeMo Agent Toolkit** is the primary integration point: MCP **client** (call external MCP tool servers from a workflow) and MCP **server** (expose any toolkit function/agent via MCP, FastMCP-based: `nat mcp serve`); **A2A** for cross-process agent teams with authentication.
 - NIM itself speaks OpenAI API (not MCP) — MCP lives at the *agent orchestration* layer, not the inference layer.
@@ -376,7 +385,7 @@ When to choose NVIDIA pieces over generic alternatives: pick NIM over plain vLLM
 1. **A fintech must run Llama-class inference fully on-prem on H100s, with CVE-patched containers and someone to call when it breaks.** → *Self-hosted NIM under an NVIDIA AI Enterprise license (Production Branch).* Compliance + support = NIM + NVAIE, not hosted endpoints or DIY vLLM.
 2. **Your LangGraph + CrewAI multi-agent app is slow and expensive; you must find which agent/tool burns the tokens — without rewriting either framework.** → *NeMo Agent Toolkit profiler.* It's framework-agnostic instrumentation/profiling across mixed frameworks.
 3. **Team wants their RAG agent to stop answering off-topic political questions and to verify tool-call arguments before execution.** → *NeMo Guardrails: dialog/input rails for topic control + execution rails for tool validation.* Runtime policing = Guardrails, not fine-tuning.
-4. **You must ingest 2M PDFs full of tables and charts into a vector DB for a multimodal RAG agent.** → *NV-Ingest (NeMo Retriever extraction) → embedding NIM (llama-3.2-nv-embedqa) → Milvus → reranking NIM; start from the multimodal PDF/RAG Blueprint.* Extraction at scale is exactly what NV-Ingest exists for.
+4. **You must ingest 2M PDFs full of tables and charts into a vector DB for a multimodal RAG agent.** → *NV-Ingest (NeMo Retriever extraction) → embedding NIM (`llama-nemotron-embed-1b-v2`) → Milvus → reranking NIM (`llama-nemotron-rerank-1b-v2`); start from the multimodal PDF/RAG Blueprint.* Extraction at scale is exactly what NV-Ingest exists for.
 5. **A 70B model powers a routing agent; costs are too high. You have months of production logs and want a smaller model with equal task accuracy, promoted only if it proves out.** → *Data flywheel: NeMo Curator on logs → NeMo Customizer LoRA-tunes Nemotron Nano → NeMo Evaluator gates promotion → deploy as NIM.* Classic distillation flywheel question.
 6. **A developer with no GPUs wants to prototype an agent today and later deploy the exact same model in the company VPC unchanged.** → *Start on build.nvidia.com hosted endpoint (OpenAI-compatible, nvapi key); later pull the same NIM from NGC and just change `base_url`.* The try-hosted-then-self-host path is NIM's core story.
 7. **Order these NAT middleware for production: caching, defense, logging, dynamic dispatch.** → *logging → defense → caching → dynamic dispatch.* Logging first (capture blocked requests too), defense before caching (never serve an unchecked cached response), caching before routing.
@@ -463,11 +472,13 @@ from langchain_community.vectorstores import FAISS
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 
 # Embedding NIM (hosted by default via NVIDIA_API_KEY; pass base_url="http://localhost:8001/v1" for a local NIM)
-emb = NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2", truncate="END")
+# Current name (NeMo Retriever NIM 1.13.0+); older blueprints used "nvidia/llama-3.2-nv-embedqa-1b-v2"
+emb = NVIDIAEmbeddings(model="nvidia/llama-nemotron-embed-1b-v2", truncate="END")
 vs = FAISS.from_texts(chunks, emb)                       # chunks: list[str] from your ingest step
 
 # Reranking NIM compresses a wide candidate set down to the best few
-reranker = NVIDIARerank(model="nvidia/llama-3.2-nv-rerankqa-1b-v2", top_n=4)
+# Current name; older form was "nvidia/llama-3.2-nv-rerankqa-1b-v2"
+reranker = NVIDIARerank(model="nvidia/llama-nemotron-rerank-1b-v2", top_n=4)
 retriever = ContextualCompressionRetriever(
     base_compressor=reranker,
     base_retriever=vs.as_retriever(search_kwargs={"k": 20}),  # over-fetch 20, rerank to 4

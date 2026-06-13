@@ -475,7 +475,7 @@
     <tr><td><b>God Router</b></td><td>Router accreted so much logic it's a single agent with extra hops</td><td class="good">Router routes only; business logic lives in sub-agents</td></tr>
     <tr><td><b>Missing observability</b></td><td>Can't trace which agent did what</td><td class="good">Distributed tracing — propagate correlation IDs through every hop (NAT profiler)</td></tr>
   </table></div>
-  <div class="callout"><b>Shared-state strategies</b> (cheapest→most robust): <b>message passing</b> (self-contained messages, but bloat) → <b>shared key-value store</b> (fast, race-prone) → <b>event sourcing</b> (append-only log, replay — auditable) → <b>CQRS</b> (split read/write models). The Warehouse Blueprint uses the <b>shared-data-layer</b> approach.</div>
+  <div class="callout"><b>Shared-state strategies</b> (cheapest→most robust): <b>message passing</b> (self-contained messages, but bloat) → <b>shared key-value store</b> (fast, race-prone) → <b>event sourcing</b> (append-only log, replay — auditable) → <b>CQRS</b> (Command-Query Responsibility Segregation: writers append to one model, readers query a separate optimized view — e.g. agents emit events while a dashboard reads a pre-computed projection). The Warehouse Blueprint uses the <b>shared-data-layer</b> approach (PostgreSQL/TimescaleDB + Milvus).</div>
 </section>
 
 <!-- ============ FRAMEWORKS ============ -->
@@ -486,7 +486,7 @@
 
   <div class="tbl-scroll"><table class="tbl">
     <tr><th>Framework</th><th>Core abstraction</th><th>Statefulness / control</th><th>Distinctives</th><th>When</th></tr>
-    <tr><td><b>LangGraph</b></td><td>Agents as <b>stateful graphs</b>: nodes (functions/LLM calls) + edges (fixed or conditional) over a typed shared <code>State</code>; low-level orchestration with agent abstractions (<code>create_react_agent</code>, supervisor/swarm libs) on top</td><td class="good"><b>Checkpointing is the headline</b>: a checkpointer persists state per <code>thread_id</code> → resume after crash, human-in-the-loop interrupts, "time travel" replay, durable long-running runs</td><td><code>add_conditional_edges</code> for routing, <code>Command(goto=, update=)</code> for hand-offs, <code>Send</code> for map-reduce fan-out; LangSmith tracing</td><td class="good">You need explicit control flow, cycles, persistence, HITL — production default for custom topologies</td></tr>
+    <tr><td><b>LangGraph</b></td><td>Agents as <b>stateful graphs</b>: nodes (functions/LLM calls) + edges (fixed or conditional) over a typed shared <code>State</code>; low-level orchestration with agent abstractions on top. <b>LangChain/LangGraph 1.0 (Oct 2025) → 1.x</b>: agent factory moved to <code>langchain.agents.create_agent</code> (middleware); <code>langgraph.prebuilt.create_react_agent</code> is <b>deprecated</b> (removal in v2.0)</td><td class="good"><b>Checkpointing is the headline</b>: a checkpointer persists state per <code>thread_id</code> → resume after crash, human-in-the-loop interrupts, "time travel" replay, durable long-running runs</td><td><code>add_conditional_edges</code> for routing, <code>Command(goto=, update=)</code> for hand-offs, <code>Send</code> for map-reduce fan-out; LangSmith tracing</td><td class="good">You need explicit control flow, cycles, persistence, HITL — production default for custom topologies</td></tr>
     <tr><td><b>AutoGen / AG2</b></td><td><b>Conversation-centric</b>: <code>ConversableAgent</code>s (assistant + user-proxy) solve tasks by <b>talking</b>; <code>GroupChat</code> + <code>GroupChatManager</code> for teams</td><td>Conversation history is the state; manager selects next speaker</td><td>AutoGen 0.4+ rebuilt as event-driven/actor runtime (<code>autogen-agentchat</code>); <b>AG2</b> is the community fork of classic 0.2 API; strong code-execution agents</td><td class="mid">Research/prototyping multi-agent chat dynamics, code-gen-and-run loops</td></tr>
     <tr><td><b>CrewAI</b></td><td><b>Role-based teams</b>: <code>Agent(role, goal, backstory)</code> + <code>Task</code>s assembled into a <code>Crew</code>; <code>Process.sequential</code> or <code>Process.hierarchical</code> (auto-spawned manager LLM delegates)</td><td>Crews are high-level/opinionated; <b>Flows</b> add event-driven, fine-grained deterministic control</td><td>Standalone (not built on LangChain); fastest path to a role-played pipeline</td><td class="mid">Quick specialist pipelines where roles map cleanly; less custom control</td></tr>
     <tr><td><b>NeMo Agent Toolkit (NAT)</b> (open source, fka AgentIQ/AIQ)</td><td><b>Not a competing framework — a unification layer</b>: treats <b>agents, tools, and whole workflows as composable function calls</b>, declared in YAML</td><td class="good">Framework-agnostic: wraps LangChain/LangGraph, CrewAI, LlamaIndex, Semantic Kernel, AutoGen, Agno, ADK agents into one workflow</td><td>Built-in agent types (ReAct, Tool-Calling, ReWOO, Reasoning, Router); profiler + <code>nat eval</code>; serves/consumes <b>MCP and A2A</b></td><td class="good">Compose teams across frameworks, profile/optimize them, expose them as services — NVIDIA's answer to "frameworks don't interoperate"</td></tr>
@@ -506,7 +506,7 @@
       </defs>
       <!-- MCP half -->
       <text x="240" y="28" text-anchor="middle" style="fill:var(--green)" font-size="15" font-weight="800">MCP — "gives an agent hands"</text>
-      <text x="240" y="46" text-anchor="middle" style="fill:var(--muted)" font-size="11">vertical: model ↔ capabilities (Anthropic, Nov 2024)</text>
+      <text x="240" y="46" text-anchor="middle" style="fill:var(--muted)" font-size="11">vertical: model ↔ capabilities (Anthropic 2024 → Linux Foundation / AAIF, Dec 2025)</text>
       <rect x="140" y="62" width="200" height="42" rx="9" style="fill:var(--panel);stroke:var(--green)"/>
       <text x="240" y="88" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">Host → client (the agent/app)</text>
       <line x1="240" y1="104" x2="240" y2="138" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arrG)"/>
@@ -556,10 +556,10 @@
 
   <div class="tbl-scroll"><table class="tbl">
     <tr><th></th><th>MCP (Model Context Protocol)</th><th>A2A (Agent2Agent Protocol)</th></tr>
-    <tr><td><b>Origin</b></td><td>Anthropic, Nov 2024; open standard</td><td>Google, Apr 2025; donated to the Linux Foundation; v1.0 spec</td></tr>
+    <tr><td><b>Origin / governance</b></td><td>Anthropic, Nov 2024; <b>donated to the Linux Foundation's Agentic AI Foundation (AAIF) on Dec 9, 2025</b> (with <code>goose</code> + <code>AGENTS.md</code>) — now vendor-neutral, no longer "Anthropic's protocol"</td><td>Google, Apr 2025; donated to the Linux Foundation; <b>A2A v1.0 (early 2026)</b> — Signed Agent Cards, multi-tenancy, version negotiation; 150+ orgs</td></tr>
     <tr><td><b>Connects</b></td><td>An agent/app to <b>tools, data, context</b> (vertical: model ↔ capabilities)</td><td><b>Agent to agent</b> (horizontal: peer services), across vendors/frameworks/orgs</td></tr>
     <tr><td><b>Roles</b></td><td>Host → client → <b>server</b>; server exposes <b>tools, resources, prompts</b></td><td>A2A <b>client</b> agent ↔ A2A <b>server</b> (remote) agent; agents stay <b>opaque</b> — no shared memory, tools, or internal state</td></tr>
-    <tr><td><b>Discovery</b></td><td>Client lists tools at connect time (<code>tools/list</code>)</td><td><b>Agent Card</b> — JSON at <code>/.well-known/agent-card.json</code>: <code>name</code>, <code>description</code>, <code>url</code>, <code>capabilities</code> (streaming, pushNotifications), <code>skills</code>, <code>securitySchemes</code>, signature</td></tr>
+    <tr><td><b>Discovery</b></td><td>Client lists tools at connect time (<code>tools/list</code>)</td><td><b>Agent Card</b> — JSON at <code>/.well-known/agent-card.json</code>: <code>name</code>, <code>description</code>, <code>url</code>, <code>capabilities</code> (streaming, pushNotifications), <code>skills</code>, <code>securitySchemes</code>; <b>v1.0 adds cryptographically <i>Signed</i> Agent Cards</b></td></tr>
     <tr><td><b>Wire</b></td><td>JSON-RPC 2.0 over <b>stdio</b> or <b>streamable HTTP</b></td><td>JSON-RPC 2.0 / gRPC / HTTP+JSON; <b>SSE</b> streaming; webhook push notifications</td></tr>
     <tr><td><b>Unit of work</b></td><td>A tool call (request/response)</td><td>A <b>Task</b> with lifecycle: <code>submitted → working → completed / failed / canceled / rejected</code>, plus <code>input-required</code> &amp; <code>auth-required</code> interrupts — built for <b>long-running</b> work</td></tr>
     <tr><td><b>One-liner</b></td><td class="good">"Gives an agent hands"</td><td class="good">"Gives agents a phone line"</td></tr>
@@ -623,10 +623,10 @@
 
   <div class="grid c2">
     <div class="card green"><h4><span class="icon">🤖</span>NeMo Agent Toolkit <span class="pill g">the architecture answer</span></h4>
-      <p><code>pip install nvidia-nat</code>, CLI <code>nat</code> — framework-agnostic library to <b>build, connect, profile, and optimize teams of agents</b>. Core idea: <b>every agent, tool, and workflow is a function call</b> → composable and reusable across frameworks.</p>
+      <p><code>pip install nvidia-nat</code>, CLI <code>nat</code> (current <b>v1.7.x</b>) — framework-agnostic library to <b>build, connect, profile, and optimize teams of agents</b>. Core idea: <b>every agent, tool, and workflow is a function call</b> → composable and reusable across frameworks. <b>Rename lineage:</b> AIQ Toolkit → NeMo Agent Toolkit; <code>aiqtoolkit</code>/<code>agentiq</code> → <code>nvidia-nat</code>; namespace <code>aiq</code> → <code>nat</code>.</p>
       <ul>
         <li>Declarative <b>workflow YAML</b> with <code>functions:</code> (tools <b>and</b> sub-agents), <code>llms:</code>, <code>embedders:</code>, <code>workflow:</code> sections; <code>_type</code> selects the component</li>
-        <li>Built-in agent <code>_type</code>s: <b><code>react_agent</code></b>, <b><code>tool_calling_agent</code></b>, <b><code>rewoo_agent</code></b>, <b><code>reasoning_agent</code></b>, plus a <b>router</b></li>
+        <li>Built-in agent <code>_type</code>s: <b><code>react_agent</code></b>, <b><code>tool_calling_agent</code></b>, <b><code>rewoo_agent</code></b>, <b><code>reasoning_agent</code></b>, <b><code>router_agent</code></b>, <b><code>sequential_executor</code></b>, <b><code>parallel_executor</code></b>, plus wrappers (<code>responses_api_agent</code>, <code>auto_memory_wrapper</code>) — see the full table below</li>
         <li>CLI: <code>nat run</code> (execute), <code>nat serve</code> (REST/UI endpoint), <code>nat eval</code> (Domain 3)</li>
         <li>Plugins for LangChain/LangGraph, CrewAI, LlamaIndex, Semantic Kernel, AutoGen, Agno, Google ADK</li>
         <li><b>MCP:</b> acts as MCP <b>client</b> (consume remote tools) and MCP <b>server</b> (publish any workflow function as a tool). <b>A2A:</b> serve workflows as A2A agents and call remote A2A agents — distributed teams with auth</li>
@@ -634,9 +634,9 @@
       </ul></div>
     <div class="card blue"><h4><span class="icon">⚡</span>NIM <span class="pill b">model-serving substrate</span></h4>
       <p>NVIDIA Inference Microservices — what the agents call. <b>OpenAI-API-compatible</b> endpoints (<code>base_url=.../v1</code>) locally or via build.nvidia.com.</p>
-      <ul><li>In NAT YAML: <code>_type: nim</code> with <code>model_name:</code></li><li>Agent nodes are model-agnostic — swap NIMs without changing the graph</li></ul></div>
-    <div class="card cyan"><h4><span class="icon">🧠</span>Nemotron models</h4>
-      <p>NVIDIA's agent-tuned open model family (reasoning toggles, tool calling). Typical orchestrator/executor choices in NVIDIA examples (e.g., Nemotron Nano for sub-agents, larger for supervisors).</p></div>
+      <ul><li>In NAT YAML: <code>_type: nim</code> with <code>model_name:</code></li><li>Agent nodes are model-agnostic — swap NIMs without changing the graph</li><li><b>2026:</b> post-GTC catalog added <b>Rubin-optimized</b> inference profiles + a free Developer-Program tier (up to 16 GPUs); NIM Operator deploys NeMo microservices as custom resources</li></ul></div>
+    <div class="card cyan"><h4><span class="icon">🧠</span>Nemotron models <span class="pill c">Nemotron 3 family</span></h4>
+      <p>NVIDIA's agent-tuned open model family (reasoning toggles, tool calling). Current headline family is <b>Nemotron 3</b> (Dec 2025 → H1 2026, shown at Computex June 2026): <b>Nano</b> ~30B/3B active (31.6B/3.2B exact; hybrid Mamba-Transformer MoE), <b>Super</b> ~120B/12B, <b>Ultra</b> ~550B/55B (reasoning/planning/agentic flagship; Computex June 1 2026), plus <b>Nano Omni</b> (multimodal). Typical use: a Nemotron 3 Nano for cheap sub-agents, Super/Ultra for supervisors. <i>(Earlier Nano 2 / Super / Ultra v1.x 2025 are superseded.)</i></p></div>
     <div class="card purple"><h4><span class="icon">📘</span>NVIDIA AI Blueprints</h4>
       <p>Reference <b>architectures</b>: prebuilt, customizable agentic workflows — e.g., <b>AI-Q research assistant</b> (a NAT-based multi-agent deep-research blueprint), customer-service assistant, vulnerability analysis.</p>
       <p style="margin-top:8px"><b>Exam angle:</b> Blueprints = validated starting designs combining NIM + NeMo + NAT, <b>not a runtime component</b>.</p></div>
@@ -653,11 +653,12 @@
     <tr><td><b>Tool Calling Agent</b></td><td><code>tool_calling_agent</code></td><td>Single-turn: read schemas, emit 0+ tool calls, return. No loop. <b>1 LLM call</b></td><td class="good">One-step task; clear query→tool mapping; minimal latency. <b>The baseline — start here</b></td></tr>
     <tr><td><b>ReAct Agent</b></td><td><code>react_agent</code></td><td>Interleaved Thought→Action→Observation loop; re-prompts with full trace each step. <b>N calls for N steps</b></td><td class="good">Multi-step, each step depends on the last result; exploratory path. <b>Set <code>max_tool_calls</code> (default 15; <code>max_iterations</code> legacy alias) or it loops forever</b></td></tr>
     <tr><td><b>ReWOO Agent</b></td><td><code>rewoo_agent</code></td><td>Plan→execute, <b>three-node graph</b> (planner→worker→solver); placeholder vars #E1→#E2. <b>~1-2 calls total</b></td><td class="good">Plan knowable upfront, no branching; cut calls/latency. <span style="color:var(--red)">Cost: no mid-course correction</span></td></tr>
-    <tr><td><b>Reasoning Agent</b></td><td><code>reasoning_agent</code></td><td><b>Wraps another function/agent</b> + an explicit up-front reasoning/plan layer — plans <b>ahead</b>, not between steps</td><td class="good">High-accuracy / deep-analysis; pairs with reasoning-tuned Nemotron. More tokens/turn</td></tr>
+    <tr><td><b>Reasoning Agent</b></td><td><code>reasoning_agent</code></td><td><b>Wraps another function/agent</b> + an explicit up-front reasoning/plan layer — plans <b>ahead</b>, not between steps. <i>vs ReWOO:</i> ReWOO <b>is</b> the executor; this <b>decorates</b> another agent (e.g. a <code>react_agent</code>) with a "think hard first, then run a normal loop" plan</td><td class="good">High-accuracy / deep-analysis; pairs with reasoning-tuned Nemotron. More tokens/turn</td></tr>
     <tr><td><b>Router Agent</b></td><td><code>router_agent</code></td><td><b>Dispatch only:</b> classify → hand off → done. No return loop. <b>LLM- or rule-based</b></td><td class="good">Multi-domain / intent routing. <span style="color:var(--amber)">Adds indirection, not intelligence</span></td></tr>
     <tr><td><b>Sequential Executor</b></td><td><code>sequential_executor</code></td><td><b>Fixed linear pipeline:</b> run listed functions in order, each output→next. <b>No decisions between steps</b></td><td class="good">Deterministic stages (extract→validate→enrich→store). Branching needed? use Router/ReAct</td></tr>
     <tr><td><b>Parallel Executor</b></td><td><code>parallel_executor</code></td><td>Fan-out independent branches <b>concurrently</b>, fan-in/merge, partial-failure handling</td><td class="good">Independent subtasks at once to cut latency (parallel tool calls as a NAT primitive)</td></tr>
     <tr><td><b>Responses API Agent</b></td><td><code>responses_api_agent</code></td><td class="bad"><b>Deployment wrapper, not a strategy:</b> exposes a NAT agent via the OpenAI <b>Responses API</b></td><td>Interop with OpenAI-native clients. <span style="color:var(--red)">Trap: not a new reasoning pattern</span></td></tr>
+    <tr><td><b>Automatic Memory Wrapper</b></td><td><code>auto_memory_wrapper</code></td><td class="bad"><b>Wrapper, not a strategy:</b> wraps any agent and auto-injects/persists long-term memory around each turn</td><td>Give an existing agent cross-turn memory without rewriting it. <span style="color:var(--red)">Trap: decorates another agent, not a reasoning pattern</span></td></tr>
   </table></div>
 
   <div class="callout"><b>Worked example — same task, three <code>_type</code>s.</b> "Find France's &amp; Germany's populations, say which is larger, write a summary." <b><code>tool_calling_agent</code></b> → one round-trip, may under-call and answer from memory (cheapest, least reliable). <b><code>react_agent</code></b> → lookup→observe→lookup→observe→compute→write, ~4-5 calls, adapts on failure (priciest). <b><code>rewoo_agent</code></b> → planner emits <code>#E1..#E4</code> in one call then executes, ~2 calls — <b>but</b> the compute step depends on the lookups, so a weak planner mis-wires placeholders and ReWOO can't re-plan. That cheap+rigid vs expensive+adaptive trade is the exam's whole point.</div>
@@ -695,7 +696,7 @@
         <li><b>LangGraph Planner/Router + 5 specialized agents</b> — equipment/asset ops, operations coordination, safety compliance, forecasting, document processing</li>
         <li><b>MCP for dynamic tool discovery</b></li>
         <li>Agents share state via a <b>common data layer</b> (PostgreSQL/TimescaleDB + Milvus), not by passing full context</li>
-        <li>Runs <b>Llama-3.3 Nemotron Super 49B</b> + <b>Nemotron Nano</b>. The <b>router→domain-bounded sub-agents</b> Blueprint</li>
+        <li>Runs <b>llama-3.3-nemotron-super-49b-v1.5</b> (primary) + <b>nemotron-nano-12b-v2-vl</b> (vision/document) + <b>llama-nemotron-embed-vl-1b-v2</b> retriever embeddings (the renamed NeMo Retriever model). The <b>router→domain-bounded sub-agents</b> Blueprint</li>
       </ul></div>
     <div class="card amber"><h4><span class="icon">♻️</span>Data Flywheel</h4>
       <p>System-level <b>continuous-improvement</b> pattern, not an agent topology.</p>
@@ -763,7 +764,7 @@
     <div class="trap"><h4><span class="n">#2</span>Reflexion ≠ fine-tuning</h4><p>Reflexion improves via <b>verbal self-critique stored in episodic memory across retries</b> — <b>no gradient updates, no reward model</b>. <span class="fix">"Improves over trials without weight changes" → Reflexion.</span></p></div>
     <div class="trap"><h4><span class="n">#3</span>ReWOO's trick is the missing O</h4><p>Plans with placeholder variables (#E1→#E2), <b>no observations fed back during planning</b> → big token savings. <span class="fix">The cost is no mid-course correction.</span></p></div>
     <div class="trap"><h4><span class="n">#4</span>Router vs supervisor</h4><p>Router classifies and dispatches <b>once</b>; supervisor <b>iterates</b>: delegate → review → re-delegate → synthesize. <span class="fix">"Agent that coordinates sub-agents in a loop" → supervisor.</span></p></div>
-    <div class="trap"><h4><span class="n">#5</span>MCP vs A2A inversion</h4><p>MCP = agent↔<b>tools/context</b> (client-server, tools/resources/prompts); A2A = <b>agent↔agent</b> (opaque peers, Agent Cards, Tasks). <span class="fix">They're complementary; "replace MCP with A2A" is always wrong.</span></p></div>
+    <div class="trap"><h4><span class="n">#5</span>MCP vs A2A inversion</h4><p>MCP = agent↔<b>tools/context</b> (client-server, tools/resources/prompts); A2A = <b>agent↔agent</b> (opaque peers, Agent Cards, Tasks). They're complementary; "replace MCP with A2A" is always wrong. <span class="fix">Governance gotcha: <b>both</b> now sit under the <b>Linux Foundation</b> — MCP joined the <b>AAIF</b> (Dec 2025); A2A reached <b>v1.0</b> (early 2026). "Anthropic's proprietary protocol" / "Google's protocol" framing is stale.</span></p></div>
     <div class="trap"><h4><span class="n">#6</span>Agent Card details</h4><p>A2A discovery via JSON at <b><code>/.well-known/agent-card.json</code></b> (name, url, capabilities, skills, securitySchemes); transports JSON-RPC 2.0 / gRPC / REST with SSE streaming. <span class="fix">MCP has no agent card — its discovery is <code>tools/list</code> after connect.</span></p></div>
     <div class="trap"><h4><span class="n">#7</span>A2A task states</h4><p>Long-running lifecycle: submitted → working → terminal (completed/failed/canceled/rejected) with <b>input-required</b> and auth-required as <b>interrupt</b> (non-terminal) states. <span class="fix">"Agent pauses to ask the caller for info" → <code>input-required</code>.</span></p></div>
     <div class="trap"><h4><span class="n">#8</span>Multi-agent ≠ always better</h4><p>Tightly coupled tasks (most coding) degrade with parallel sub-agents (conflicting implicit decisions — Cognition); plus ~15× token cost. <span class="fix">The exam answer often is "stay single-agent / share full context".</span></p></div>
@@ -892,7 +893,10 @@ def react_loop(user_msg, max_steps=8):
 
   <div class="card blue">
     <h4><span class="icon">⭐</span>2 · Supervisor/worker team in LangGraph <span class="pill b">prebuilt supervisor</span></h4>
-    <pre class="code-block"><code>from langgraph.prebuilt import create_react_agent      # 2025+: also exposed as create_agent in the `langchain` pkg
+    <pre class="code-block"><code># LangChain/LangGraph 1.x (2026): create_react_agent is now in langchain.agents and DEPRECATED
+# (removal in v2.0). Canonical is langchain.agents.create_agent (runs on LangGraph + middleware).
+# It still works with a deprecation warning, shown here for stability across 1.x point releases.
+from langgraph.prebuilt import create_react_agent      # deprecated alias; prefer langchain.agents.create_agent
 from langgraph_supervisor import create_supervisor      # pip install langgraph-supervisor
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
@@ -957,12 +961,12 @@ if __name__ == "__main__":
     mcp.run(transport="streamable-http")   # or "stdio" for local subprocess use</code></pre>
     <pre class="code-block"><code># agent side — pip install langchain-mcp-adapters
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent          # 1.x canonical (was langgraph.prebuilt.create_react_agent)
 
 client = MultiServerMCPClient({"orders": {"transport": "streamable_http",
                                           "url": "http://localhost:8000/mcp"}})
 tools = await client.get_tools()                  # MCP tools -&gt; framework-native tools
-agent = create_react_agent(model, tools)</code></pre>
+agent = create_agent(model, tools)</code></pre>
     <p><b>What to notice:</b> the function signature + docstring <b>are</b> the tool schema — FastMCP derives the JSON Schema from type hints, which is why typing and docstrings are load-bearing. The agent side shows MCP's value: the agent never imports the order system; it discovers tools over the protocol, so servers can be swapped/added without touching agent code. NAT does the same with <code>_type: mcp_client</code>, and can publish any workflow function as an MCP server.</p>
   </div>
 
