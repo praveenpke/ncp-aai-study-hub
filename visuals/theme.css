@@ -124,6 +124,8 @@ nav.section-nav { padding-left: 56px; padding-right: 56px; }
   transition: transform .15s, border-color .15s;
 }
 .theme-toggle:hover, .site-menu-btn:hover { transform: scale(1.08); border-color: var(--green); }
+/* keep the toggle's sun/moon glyph monochrome to match the B&W theme */
+.theme-toggle { filter: grayscale(1); }
 
 /* slide-over site menu */
 .site-menu-overlay {
@@ -138,17 +140,20 @@ nav.section-nav { padding-left: 56px; padding-right: 56px; }
 .site-menu-overlay.open { opacity: 1; pointer-events: auto; }
 .site-menu {
   position: fixed;
+  display: block;            /* override the page's generic `nav{display:flex}` */
   top: 0;
   left: 0;
   bottom: 0;
   z-index: 960;
-  width: min(320px, 88vw);
-  background: var(--panel);
-  border-right: 1px solid var(--line);
-  box-shadow: 8px 0 32px rgba(0, 0, 0, .3);
+  width: min(310px, 86vw);
+  background: var(--panel2);
+  backdrop-filter: none;
+  border-right: 1px solid var(--green-dim);
+  box-shadow: 8px 0 40px rgba(0, 0, 0, .5);
   transform: translateX(-105%);
   transition: transform .22s ease;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 18px 0 28px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
@@ -160,7 +165,7 @@ nav.section-nav { padding-left: 56px; padding-right: 56px; }
   padding: 0 18px 12px;
   border-bottom: 1px solid var(--line);
 }
-.site-menu .menu-head .menu-title { font-weight: 800; color: var(--green); font-size: .95rem; letter-spacing: .06em; }
+.site-menu .menu-head .menu-title { font-weight: 800; color: var(--green); font-size: .95rem; letter-spacing: .06em; white-space: nowrap; }
 .site-menu .menu-close {
   background: none;
   border: none;
@@ -188,8 +193,12 @@ nav.section-nav { padding-left: 56px; padding-right: 56px; }
   color: var(--text);
   text-decoration: none;
   font-size: .88rem;
+  white-space: nowrap;
   border-left: 3px solid transparent;
+  border-bottom: 0;                 /* cancel page nav-a underline leak */
+  filter: grayscale(1);             /* keep leading emoji icons monochrome */
 }
+.site-menu a > span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .site-menu a:hover { background: var(--bg2); border-left-color: var(--green); }
 .site-menu a.current { border-left-color: var(--green); background: var(--bg2); font-weight: 700; }
 .site-menu a .wt {
